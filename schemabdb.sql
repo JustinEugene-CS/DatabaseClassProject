@@ -59,6 +59,9 @@ CREATE TABLE `injuries` (
   `recovery_status` varchar(50) DEFAULT NULL,
   `expected_return` date DEFAULT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `treatment_received` varchar(100) DEFAULT NULL,
+  `injury_recurrence` boolean DEFAULT FALSE,
+  `games_missed_due_to_injury` INT DEFAULT 0,
   PRIMARY KEY (`injury_id`),
   KEY `fk_injuries_player` (`player_id`),
   CONSTRAINT `fk_injuries_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`player_id`) ON DELETE CASCADE ON UPDATE CASCADE
