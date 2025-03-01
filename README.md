@@ -9,7 +9,7 @@ A multi-functional DBMS for the basketball team at MTSU, showcasing their statis
 [Python 3](https://www.python.org/downloads/)
 [FastAPI](https://fastapi.tiangolo.com/)
 #### DBMS
-mySQL
+[mySQL](https://dev.mysql.com/downloads/mysql/)
 [mySQL Workbench](https://www.mysql.com/products/workbench/) (recommended)
 #### Frontend
 [React](https://react.dev/)
