@@ -1,27 +1,27 @@
 body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background-color: #fefefe;
-  }
-  
-  .navbar {
-    background-color: #002855; /* Navy */
-    padding: 10px;
-    display: flex;
-    justify-content: center;
-  }
-  
-  .nav-link {
-    color: #FFB612; /* Gold */
-    text-decoration: none;
-    margin: 0 15px;
-    font-weight: bold;
-  }
-  
-  .nav-link.active {
-    text-decoration: underline;
-  }
-  
-  .container {
-    padding: 20px;
-  }
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #fefefe;
+}
+
+.navbar {
+  background-color: #002855; /* Navy */
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.nav-link {
+  color: #FFB612; /* Gold */
+  text-decoration: none;
+  margin: 0 15px;
+  font-weight: bold;
+}
+
+.nav-link.active {
+  text-decoration: underline;
+}
+
+.container {
+  padding: 20px;
+}

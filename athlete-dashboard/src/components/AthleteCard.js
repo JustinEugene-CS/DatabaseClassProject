@@ -1,6 +1,6 @@
 import React from 'react';
 
-const AthleteCard = ({ athlete }) => {
+const AthleteCard = ({ player }) => {
   return (
     <div style={{
       border: '1px solid #ccc',
@@ -9,14 +9,24 @@ const AthleteCard = ({ athlete }) => {
       marginBottom: 16,
       backgroundColor: '#fff'
     }}>
-      <h3>{athlete.name}</h3>
-      <div>
-        <strong>Statistics:</strong>
-        <pre>{JSON.stringify(athlete.statistics, null, 2)}</pre>
-      </div>
-      <div>
-        <strong>Injuries:</strong>
-        <pre>{JSON.stringify(athlete.injuries, null, 2)}</pre>
+      <h3>{player.name}</h3>
+      <p><strong>Position:</strong> {player.position}</p>
+      <p><strong>Jersey Number:</strong> {player.jersey_number}</p>
+      <p><strong>Year:</strong> {player.year}</p>
+      {/* Performance Data */}
+      <div style={{ marginTop: 10 }}>
+        <strong>Performances:</strong>
+        {player.performances && player.performances.length > 0 ? (
+          player.performances.map(perf => (
+            <div key={perf.performance_id} style={{ borderTop: '1px solid #eee', marginTop: 5, paddingTop: 5 }}>
+              <p><strong>Game ID:</strong> {perf.game_id}</p>
+              <p><strong>Points:</strong> {perf.points}, <strong>Rebounds:</strong> {perf.rebounds}</p>
+              <p><strong>Assists:</strong> {perf.assists}, <strong>Minutes:</strong> {perf.minutes_played}</p>
+            </div>
+          ))
+        ) : (
+          <p>No performance records available.</p>
+        )}
       </div>
     </div>
   );

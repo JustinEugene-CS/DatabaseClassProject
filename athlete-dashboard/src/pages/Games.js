@@ -1,19 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const Games = () => {
-  const [query, setQuery] = useState('');
+  const [games, setGames] = useState([]);
+
+  useEffect(() => {
+    fetch('http://127.0.0.1:8000/games')
+      .then(res => res.json())
+      .then(data => setGames(data))
+      .catch(err => console.error('Error fetching games:', err));
+  }, []);
 
   return (
     <div className="container">
-      <h2>Search Games</h2>
-      <input
-        type="text"
-        placeholder="Search for games (e.g. by team, date)..."
-        value={query}
-        onChange={e => setQuery(e.target.value)}
-        style={{ padding: 8, width: '100%', marginBottom: 20, fontSize: '16px' }}
-      />
-      <p>Game search functionality coming soon.</p>
+      <h2>Games</h2>
+      {games.length > 0 ? (
+        games.map(game => (
+          <div key={game.game_id} style={{
+            backgroundColor: '#fff',
+            padding: 16,
+            borderRadius: 8,
+            marginBottom: 16,
+            boxShadow: '0 0 5px rgba(0,0,0,0.1)'
+          }}>
+            <p><strong>Date:</strong> {new Date(game.game_date).toLocaleDateString()}</p>
+            <p><strong>Opponent:</strong> {game.opponent}</p>
+            <p><strong>Location:</strong> {game.location || 'N/A'}</p>
+            <p><strong>Score:</strong> {game.team_score} - {game.opponent_score}</p>
+          </div>
+        ))
+      ) : (
+        <p>Loading games...</p>
+      )}
     </div>
   );
 };

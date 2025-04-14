@@ -6,7 +6,7 @@ const Login = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    // Placeholder: Implement authentication logic here.
+    // Placeholder for authentication logic
     alert(`Logging in as ${username}`);
   };
 
