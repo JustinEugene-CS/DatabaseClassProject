@@ -14,7 +14,7 @@ const Athletes = () => {
   }, []);
 
   const filteredPlayers = players.filter(player =>
-    player.name.toLowerCase().includes(searchTerm.toLowerCase())
+    (player.first_name + ' ' + player.last_name).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (

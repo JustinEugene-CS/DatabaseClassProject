@@ -26,6 +26,7 @@ const Games = () => {
             <p><strong>Opponent:</strong> {game.opponent}</p>
             <p><strong>Location:</strong> {game.location || 'N/A'}</p>
             <p><strong>Score:</strong> {game.team_score} - {game.opponent_score}</p>
+            <p><strong>Attendance:</strong> {game.attendance}</p>
           </div>
         ))
       ) : (

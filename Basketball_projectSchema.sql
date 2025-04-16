@@ -29,6 +29,7 @@ CREATE TABLE `games` (
   `location` varchar(50) DEFAULT NULL,
   `team_score` int DEFAULT '0',
   `opponent_score` int DEFAULT '0',
+  `attendance` int DEFAULT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`game_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -40,7 +41,27 @@ CREATE TABLE `games` (
 
 LOCK TABLES `games` WRITE;
 /*!40000 ALTER TABLE `games` DISABLE KEYS */;
-INSERT INTO `games` VALUES (1,'2025-01-15','University of Memphis','Home',78,65,'2025-02-06 10:39:38'),(2,'2025-01-22','Tennessee State','Away',82,76,'2025-02-06 10:39:38'),(3,'2025-02-01','Vanderbilt','Home',68,70,'2025-02-06 10:39:38'),(4,'2025-01-15','University of Memphis','Home',78,65,'2025-02-28 09:23:54'),(5,'2025-01-22','Tennessee State','Away',82,76,'2025-02-28 09:23:54'),(6,'2025-02-01','Vanderbilt','Home',68,70,'2025-02-28 09:23:54'),(7,'2025-02-08','Western Kentucky','Away',75,80,'2025-02-28 09:23:54'),(8,'2025-02-15','Belmont University','Home',90,85,'2025-02-28 09:23:54'),(9,'2025-01-15','University of Memphis','Home',78,65,'2025-02-28 09:24:56'),(10,'2025-01-22','Tennessee State','Away',82,76,'2025-02-28 09:24:56'),(11,'2025-02-01','Vanderbilt','Home',68,70,'2025-02-28 09:24:56'),(12,'2025-02-08','Western Kentucky','Away',75,80,'2025-02-28 09:24:56'),(13,'2025-02-15','Belmont University','Home',90,85,'2025-02-28 09:24:56');
+INSERT INTO games (game_date, opponent, location, team_score, opponent_score, attendance)
+VALUES 
+('2025-01-09', 'KENNESAW ST.', 'Home', 84, 79, 2051),
+('2025-01-11', 'JACKSONVILLE ST.', 'Home', 81, 64, 2237),
+('2025-01-18', 'WESTERN KY.', 'Home', 71, 57, 6512),
+('2025-01-23', 'Sam Houston', 'Away', 77, 75, 987),
+('2025-01-25', 'Louisiana Tech', 'Away', 69, 75, 2414),
+('2025-01-30', 'NEW MEXICO ST.', 'Home', 57, 61, 3307),
+('2025-02-01', 'UTEP', 'Home', 71, 68, 4012),
+('2025-02-06', 'Jacksonville St.', 'Away', 63, 77, 2943),
+('2025-02-08', 'Kennesaw St.', 'Away', 76, 75, 1858),
+('2025-02-15', 'Western Ky.', 'Away', 87, 77, 4647),
+('2025-02-20', 'LOUISIANA TECH', 'Home', 74, 85, 3505),
+('2025-02-22', 'SAM HOUSTON', 'Home', 74, 70, 4413),
+('2025-02-27', 'New Mexico St.', 'Away', 71, 66, 5253),
+('2025-03-01', 'UTEP', 'Away', 76, 75, 5854),
+('2025-03-06', 'LIBERTY', 'Home', 81, 86, 4858),
+('2025-03-08', 'FIU', 'Home', 78, 56, 4018),
+('2025-03-13', 'Louisiana Tech', 'Home', 77, 75, 3108),
+('2025-03-14', 'Jacksonville St.', 'Home', 68, 70, 2506),
+('2025-03-18', 'CHATTANOOGA', 'Home', 103, 109, 3505);
 /*!40000 ALTER TABLE `games` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -71,44 +92,15 @@ CREATE TABLE `injuries` (
 
 LOCK TABLES `injuries` WRITE;
 /*!40000 ALTER TABLE `injuries` DISABLE KEYS */;
-INSERT INTO `injuries` VALUES (1,3,'Ankle Sprain','2025-01-20','In progress','2025-02-15','2025-02-06 10:39:38'),(2,2,'Shoulder Injury','2025-01-15','Recovered',NULL,'2025-02-06 10:39:38'),(3,1,'Hamstring Strain','2025-01-05','Recovered',NULL,'2025-02-28 09:24:56'),(4,2,'Shoulder Injury','2025-01-15','Recovered',NULL,'2025-02-28 09:24:56'),(5,3,'Ankle Sprain','2025-01-20','In progress','2025-02-15','2025-02-28 09:24:56');
+INSERT INTO injuries (player_id, injury_type, injury_date, recovery_status, expected_return)
+VALUES
+(1, 'Ankle Sprain', '2025-01-05', 'Recovered', NULL),
+(3, 'Hamstring Strain', '2025-01-15', 'In progress', '2025-02-10'),
+(5, 'Shoulder Dislocation', '2025-02-01', 'Recovered', NULL),
+(6, 'Wrist Fracture', '2025-02-15', 'In progress', '2025-03-20'),
+(9, 'Knee Contusion', '2025-01-10', 'Recovered', NULL),
+(12, 'Back Tightness', '2025-02-05', 'In progress', '2025-03-01');
 /*!40000 ALTER TABLE `injuries` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `performances`
---
-
-DROP TABLE IF EXISTS `performances`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `performances` (
-  `performance_id` int NOT NULL AUTO_INCREMENT,
-  `player_id` int NOT NULL,
-  `game_id` int NOT NULL,
-  `points` int DEFAULT '0',
-  `rebounds` int DEFAULT '0',
-  `assists` int DEFAULT '0',
-  `turnovers` int DEFAULT '0',
-  `blocks` int DEFAULT '0',
-  `minutes_played` decimal(4,1) DEFAULT '0.0',
-  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`performance_id`),
-  UNIQUE KEY `uix_performance_player_game` (`player_id`,`game_id`),
-  KEY `fk_performances_game` (`game_id`),
-  CONSTRAINT `fk_performances_game` FOREIGN KEY (`game_id`) REFERENCES `games` (`game_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_performances_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`player_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=64 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `performances`
---
-
-LOCK TABLES `performances` WRITE;
-/*!40000 ALTER TABLE `performances` DISABLE KEYS */;
-INSERT INTO `performances` VALUES (1,1,1,15,3,5,2,0,30.5,'2025-02-06 10:39:38'),(2,2,1,20,10,2,1,1,28.0,'2025-02-06 10:39:38'),(3,3,1,10,12,1,0,2,25.5,'2025-02-06 10:39:38'),(4,1,2,18,4,4,3,0,31.2,'2025-02-06 10:39:38'),(5,2,2,22,7,3,2,1,33.1,'2025-02-06 10:39:38'),(6,3,3,19,9,2,4,2,29.0,'2025-02-06 10:39:38'),(57,1,3,14,5,6,2,0,35.0,'2025-02-28 09:27:39'),(58,2,3,19,8,1,3,1,36.5,'2025-02-28 09:27:39'),(59,1,4,21,6,5,4,0,37.0,'2025-02-28 09:27:39'),(60,2,4,30,10,2,5,1,38.0,'2025-02-28 09:27:39'),(61,1,5,15,3,8,2,0,30.0,'2025-02-28 09:27:39'),(62,2,5,18,9,2,2,1,32.5,'2025-02-28 09:27:39'),(63,3,5,22,11,1,1,2,28.5,'2025-02-28 09:27:39');
-/*!40000 ALTER TABLE `performances` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -119,18 +111,42 @@ DROP TABLE IF EXISTS `players`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `players` (
-  `player_id` int NOT NULL AUTO_INCREMENT,
-  `first_name` varchar(50) NOT NULL,
-  `last_name` varchar(50) NOT NULL,
-  `position` varchar(20) DEFAULT NULL,
-  `jersey_number` int DEFAULT NULL,
-  `weight` decimal(5,2) DEFAULT NULL,
-  `height` decimal(4,2) DEFAULT NULL,
-  `year` varchar(10) DEFAULT NULL,
-  `age` int DEFAULT NULL,
-  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `player_id` INT NOT NULL AUTO_INCREMENT,
+  `first_name` VARCHAR(50) NOT NULL,
+  `last_name` VARCHAR(50) NOT NULL,
+  `position` VARCHAR(20) DEFAULT NULL,
+  `jersey_number` INT DEFAULT NULL,
+  `year` VARCHAR(10) DEFAULT NULL,
+  `age` INT DEFAULT NULL,
+  -- MTSU season stats
+  `games_played` INT DEFAULT 0,
+  `games_started` INT DEFAULT 0,
+  `minutes` INT DEFAULT 0,
+  `minutes_per_game` DECIMAL(4,1) DEFAULT 0.0,
+  `fg_made` INT DEFAULT 0,
+  `fg_attempts` INT DEFAULT 0,
+  `fg_pct` DECIMAL(5,3) DEFAULT 0.000,
+  `three_made` INT DEFAULT 0,
+  `three_attempts` INT DEFAULT 0,
+  `three_pct` DECIMAL(5,3) DEFAULT 0.000,
+  `ft_made` INT DEFAULT 0,
+  `ft_attempts` INT DEFAULT 0,
+  `ft_pct` DECIMAL(5,3) DEFAULT 0.000,
+  `off_rebounds` INT DEFAULT 0,
+  `def_rebounds` INT DEFAULT 0,
+  `total_rebounds` INT DEFAULT 0,
+  `rebounds_per_game` DECIMAL(4,1) DEFAULT 0.0,
+  `personal_fouls` INT DEFAULT 0,
+  `dq` INT DEFAULT 0,
+  `assists` INT DEFAULT 0,
+  `turnovers` INT DEFAULT 0,
+  `blocks` INT DEFAULT 0,
+  `steals` INT DEFAULT 0,
+  `points` INT DEFAULT 0,
+  `points_per_game` DECIMAL(4,1) DEFAULT 0.0,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`player_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -139,7 +155,165 @@ CREATE TABLE `players` (
 
 LOCK TABLES `players` WRITE;
 /*!40000 ALTER TABLE `players` DISABLE KEYS */;
-INSERT INTO `players` VALUES (1,'John','Doe','Guard',1,180.00,72.00,'Freshman',19,'2025-02-06 10:39:38'),(2,'Michael','Smith','Forward',12,210.50,77.50,'Sophomore',20,'2025-02-06 10:39:38'),(3,'Aaron','Johnson','Center',33,250.00,80.00,'Senior',22,'2025-02-06 10:39:38'),(4,'Torey','Alston','Forward',2,190.00,80.00,'Freshman',18,'2025-02-28 09:13:24'),(5,'Chris','Loofe','Forward',13,220.00,83.00,'Freshman',19,'2025-02-28 09:13:24'),(6,'Tre','Green','Guard',11,190.00,75.00,'Sophomore',20,'2025-02-28 09:13:24'),(7,'Josh','Ogundele','Center',23,300.00,83.00,'Junior',21,'2025-02-28 09:13:24'),(8,'Ty','Mosley','Guard',1,190.00,77.00,'Senior',22,'2025-02-28 09:13:24'),(9,'Torey','Alston','Forward',2,190.00,80.00,'Freshman',18,'2025-02-28 09:24:56'),(10,'Chris','Loofe','Forward',13,220.00,83.00,'Freshman',19,'2025-02-28 09:24:56'),(11,'Tre','Green','Guard',11,190.00,75.00,'Sophomore',20,'2025-02-28 09:24:56'),(12,'Josh','Ogundele','Center',23,300.00,83.00,'Junior',21,'2025-02-28 09:24:56'),(13,'Ty','Mosley','Guard',1,190.00,77.00,'Senior',22,'2025-02-28 09:24:56');
+INSERT INTO players (first_name, last_name, position, jersey_number, year, age,
+  games_played, games_started, minutes, minutes_per_game,
+  fg_made, fg_attempts, fg_pct,
+  three_made, three_attempts, three_pct,
+  ft_made, ft_attempts, ft_pct,
+  off_rebounds, def_rebounds, total_rebounds, rebounds_per_game,
+  personal_fouls, dq, assists, turnovers, blocks, steals,
+  points, points_per_game,
+  height, weight)
+VALUES
+('Jestin', 'Porter', 'G', 3, 'Senior', 22,
+ 34, 34, 1149, 33.8,
+ 176, 427, 0.412,
+ 84, 230, 0.365,
+ 74, 90, 0.822,
+ 25, 72, 97, 2.9,
+ 55, 1, 42, 57, 6, 38,
+ 510, 15.0,
+ 73.0, 180.0),
+
+('Essam', 'Mostafa', 'F', 44, 'Graduate Student', 25,
+ 33, 33, 896, 27.2,
+ 197, 324, 0.608,
+ 5, 11, 0.455,
+ 80, 128, 0.625,
+ 111, 192, 303, 9.2,
+ 91, 1, 40, 40, 30, 39,
+ 479, 14.5,
+ 81.0, 250.0),
+
+('Camryn', 'Weston', 'G', 24, 'Redshirt Senior', 24,
+ 34, 9, 950, 27.9,
+ 142, 342, 0.415,
+ 37, 133, 0.278,
+ 89, 118, 0.754,
+ 32, 98, 130, 3.8,
+ 84, 3, 118, 69, 3, 38,
+ 410, 12.1,
+ 75.0, 190.0),
+
+('Jlynn', 'Counter', 'G', 2, 'Senior', NULL,
+ 31, 25, 849, 27.4,
+ 118, 272, 0.434,
+ 38, 125, 0.304,
+ 52, 69, 0.754,
+ 12, 117, 129, 4.2,
+ 50, 0, 109, 45, 11, 31,
+ 326, 10.5,
+ 75.0, 195.0),
+
+('Kamari', 'Lands', 'G', 22, 'Junior', 21,
+ 22, 13, 442, 20.1,
+ 65, 179, 0.363,
+ 30, 102, 0.294,
+ 19, 27, 0.704,
+ 9, 42, 51, 2.3,
+ 34, 0, 26, 20, 6, 18,
+ 179, 8.1,
+ 80.0, 225.0),
+
+('Torey', 'Alston', 'F', 10, 'Redshirt Freshman', 20,
+ 34, 20, 681, 20.0,
+ 77, 135, 0.570,
+ 2, 10, 0.200,
+ 56, 102, 0.549,
+ 56, 120, 176, 5.2,
+ 75, 1, 29, 42, 33, 14,
+ 212, 6.2,
+ 80.0, 200.0),
+
+('Justin', 'Bufford', 'G', 4, 'Senior', 23,
+ 34, 34, 837, 24.6,
+ 54, 157, 0.344,
+ 24, 91, 0.264,
+ 41, 67, 0.612,
+ 30, 74, 104, 3.1,
+ 76, 1, 31, 39, 17, 26,
+ 173, 5.1,
+ 78.0, 190.0),
+
+('Tre', 'Green', 'G', 11, 'Junior', 20,
+ 31, 0, 412, 13.3,
+ 46, 98, 0.469,
+ 29, 72, 0.403,
+ 19, 24, 0.792,
+ 11, 40, 51, 1.6,
+ 25, 0, 9, 20, 1, 6,
+ 140, 4.5,
+ 75.0, 190.0),
+
+('Chris', 'Loofe', 'F', 13, 'Sophomore', 20,
+ 34, 1, 461, 13.6,
+ 52, 99, 0.525,
+ 5, 26, 0.192,
+ 26, 50, 0.520,
+ 38, 78, 116, 3.4,
+ 74, 1, 8, 33, 35, 4,
+ 135, 4.0,
+ 83.0, 230.0),
+
+('Jarred', 'Hall', 'F', 5, 'Sophomore', NULL,
+ 3, 0, 16, 5.3,
+ 3, 3, 1.000,
+ 2, 2, 1.000,
+ 0, 0, 0.000,
+ 2, 3, 5, 1.7,
+ 1, 0, 0, 2, 1, 0,
+ 8, 2.7,
+ 80.0, 205.0),
+
+('Alec', 'Oglesby', 'G', 1, 'Graduate Student', 23,
+ 4, 0, 30, 7.5,
+ 2, 9, 0.222,
+ 1, 6, 0.167,
+ 1, 2, 0.500,
+ 1, 1, 2, 0.5,
+ 1, 0, 3, 1, 0, 3,
+ 6, 1.5,
+ 77.0, 200.0),
+
+('Jacob', 'Johnson', 'G', 15, 'Redshirt Senior', 23,
+ 20, 1, 194, 9.7,
+ 10, 20, 0.500,
+ 0, 0, 0.000,
+ 0, 4, 0.000,
+ 7, 18, 25, 1.3,
+ 12, 0, 7, 3, 2, 7,
+ 20, 1.0,
+ 77.0, 195.0),
+
+('Christian', 'Fussell', 'F', 7, 'Senior', 23,
+ 7, 0, 36, 5.1,
+ 2, 12, 0.167,
+ 1, 7, 0.143,
+ 0, 1, 0.000,
+ 3, 4, 7, 1.0,
+ 5, 0, 1, 2, 2, 0,
+ 5, 0.7,
+ 82.0, 225.0),
+
+('Isiah', 'Lightsy', 'G', 0, 'Senior', 21,
+ 5, 0, 10, 2.0,
+ 1, 5, 0.200,
+ 1, 4, 0.250,
+ 0, 0, 0.000,
+ 0, 3, 3, 0.6,
+ 2, 0, 0, 0, 1, 0,
+ 3, 0.6,
+ 76.0, 190.0),
+
+('Jack', 'Jubenville', 'G', 55, 'Redshirt Junior', 22,
+ 5, 0, 12, 2.4,
+ 0, 1, 0.000,
+ 0, 0, 0.000,
+ 2, 3, 0.667,
+ 0, 1, 1, 0.2,
+ 3, 0, 4, 3, 0, 0,
+ 2, 0.4,
+ 72.0, 180.0);
 /*!40000 ALTER TABLE `players` ENABLE KEYS */;
 UNLOCK TABLES;
 

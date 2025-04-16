@@ -12,9 +12,24 @@ const Injuries = () => {
       .catch(err => console.error('Error fetching injuries:', err));
   }, []);
 
-  const filteredInjuries = injuries.filter(injury =>
-    injury.injury_type.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'recovered':
+        return 'green';
+      case 'in progress':
+        return 'orange';
+      case 'out indefinitely':
+        return 'red';
+      default:
+        return 'gray';
+    }
+  };
+
+  const filteredInjuries = injuries
+    .sort((a, b) => new Date(b.injury_date) - new Date(a.injury_date))
+    .filter(injury =>
+      injury.injury_type.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   return (
     <div className="container">
@@ -29,10 +44,15 @@ const Injuries = () => {
             marginBottom: 16,
             boxShadow: '0 0 5px rgba(0,0,0,0.1)'
           }}>
-            <p><strong>Player ID:</strong> {injury.player_id}</p>
+            <p><strong>Player:</strong> {injury.first_name} {injury.last_name}</p>
             <p><strong>Injury Type:</strong> {injury.injury_type}</p>
             <p><strong>Date:</strong> {new Date(injury.injury_date).toLocaleDateString()}</p>
-            <p><strong>Recovery Status:</strong> {injury.recovery_status}</p>
+            <p>
+              <strong>Recovery Status:</strong>{' '}
+              <span style={{ color: getStatusColor(injury.recovery_status), fontWeight: 'bold' }}>
+                {injury.recovery_status || 'N/A'}
+              </span>
+            </p>
             <p><strong>Expected Return:</strong> {injury.expected_return ? new Date(injury.expected_return).toLocaleDateString() : 'N/A'}</p>
           </div>
         ))
