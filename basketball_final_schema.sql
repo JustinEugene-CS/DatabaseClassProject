@@ -1,5 +1,4 @@
-
--- Clean schema for basketball project
+-- Schema for basketball project
 
 DROP TABLE IF EXISTS injuries;
 DROP TABLE IF EXISTS games;
@@ -69,6 +68,19 @@ CREATE TABLE injuries (
   KEY fk_injuries_player (player_id),
   CONSTRAINT fk_injuries_player FOREIGN KEY (player_id)
     REFERENCES players(player_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Table: favorites
+CREATE TABLE favorites (
+  favorite_id INT NOT NULL AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  item_type ENUM('player','game') NOT NULL,
+  item_id INT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (favorite_id),
+  KEY fk_fav_user (user_id),
+  CONSTRAINT fk_fav_user FOREIGN KEY (user_id)
+    REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE users (
