@@ -38,7 +38,7 @@ root/
 
 ## Team Roles
 
-- **Frontend Development**: Justin, Jay
+- **Frontend Development**: Justin, Jaelin
 - **Database Management**: Clifford
 - **Backend Development**: Jonah
 
