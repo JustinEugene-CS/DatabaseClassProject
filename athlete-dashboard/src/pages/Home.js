@@ -21,7 +21,7 @@ const Home = () => {
       <h1>Welcome to the MTSU Basketball Dashboard</h1>
 
       <section style={{ marginTop: 30 }}>
-        <h2>Random Player</h2>
+        <h2>Random Player Spotlight</h2>
         {randomPlayer ? (
           <div style={{
             backgroundColor: '#fff',
@@ -29,12 +29,12 @@ const Home = () => {
             borderRadius: 8,
             boxShadow: '0 0 5px rgba(0,0,0,0.1)'
           }}>
-            <h3>{randomPlayer.name}</h3>
-            <p><strong>Team:</strong> {randomPlayer.team || 'N/A'}</p>
+            <h3>{randomPlayer.first_name} {randomPlayer.last_name}</h3>
             <p><strong>Position:</strong> {randomPlayer.position || 'N/A'}</p>
-            <p><strong>Points:</strong> {randomPlayer.performances && randomPlayer.performances.length > 0 
-              ? randomPlayer.performances[0].points // Example: show points from first performance
-              : 'N/A'}</p>
+            <p><strong>Class:</strong> {randomPlayer.year}</p>
+            <p><strong>PPG:</strong> {randomPlayer.points_per_game}</p>
+            <p><strong>RPG:</strong> {randomPlayer.rebounds_per_game}</p>
+            <p><strong>APG:</strong> {randomPlayer.assists}</p>
           </div>
         ) : (
           <p>Loading random player...</p>
@@ -54,6 +54,7 @@ const Home = () => {
             <p><strong>Opponent:</strong> {randomGame.opponent}</p>
             <p><strong>Location:</strong> {randomGame.location || 'N/A'}</p>
             <p><strong>Score:</strong> {randomGame.team_score} - {randomGame.opponent_score}</p>
+            <p><strong>Attendance:</strong> {randomGame.attendance}</p>
           </div>
         ) : (
           <p>Loading random game...</p>

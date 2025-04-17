@@ -3,31 +3,24 @@ import React from 'react';
 const AthleteCard = ({ player }) => {
   return (
     <div style={{
-      border: '1px solid #ccc',
-      borderRadius: 8,
+      backgroundColor: '#f9f9f9',
       padding: 16,
+      borderRadius: 8,
       marginBottom: 16,
-      backgroundColor: '#fff'
+      boxShadow: '0 0 5px rgba(0,0,0,0.1)'
     }}>
-      <h3>{player.name}</h3>
-      <p><strong>Position:</strong> {player.position}</p>
-      <p><strong>Jersey Number:</strong> {player.jersey_number}</p>
-      <p><strong>Year:</strong> {player.year}</p>
-      {/* Performance Data */}
-      <div style={{ marginTop: 10 }}>
-        <strong>Performances:</strong>
-        {player.performances && player.performances.length > 0 ? (
-          player.performances.map(perf => (
-            <div key={perf.performance_id} style={{ borderTop: '1px solid #eee', marginTop: 5, paddingTop: 5 }}>
-              <p><strong>Game ID:</strong> {perf.game_id}</p>
-              <p><strong>Points:</strong> {perf.points}, <strong>Rebounds:</strong> {perf.rebounds}</p>
-              <p><strong>Assists:</strong> {perf.assists}, <strong>Minutes:</strong> {perf.minutes_played}</p>
-            </div>
-          ))
-        ) : (
-          <p>No performance records available.</p>
-        )}
-      </div>
+      <h3>{player.first_name} {player.last_name}</h3>
+      <p><strong>Position:</strong> {player.position || 'N/A'}</p>
+      <p><strong>Jersey #:</strong> {player.jersey_number}</p>
+      <p><strong>Class:</strong> {player.year}</p>
+
+      <hr />
+
+      <p><strong>Games Played:</strong> {player.games_played}</p>
+      <p><strong>Points/Game:</strong> {player.points_per_game}</p>
+      <p><strong>Rebounds/Game:</strong> {player.rebounds_per_game}</p>
+      <p><strong>Assists:</strong> {player.assists}</p>
+      <p><strong>FG%:</strong> {(player.fg_pct * 100).toFixed(1)}%</p>
     </div>
   );
 };
