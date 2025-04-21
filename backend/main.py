@@ -1,208 +1,194 @@
-# to start, run "source .venv/bin/activate"
-# run server with "fastapi dev main.py"
-# docs at http://127.0.0.1:8000/docs or /redoc
-
 from typing import List, Optional, Dict
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import mysql.connector
-from mysql.connector import Error
+import sqlite3
 from datetime import datetime
 
 app = FastAPI()
 
-# MySQL configuration (update with your credentials)
-MYSQL_HOST = "localhost"
-MYSQL_USER = "your_mysql_username"
-MYSQL_PASSWORD = "your_mysql_password"
-MYSQL_DATABASE = "basketdb"
+SQLITE_DB_PATH = "basketdb.sqlite3"
 
 # -------------------------------
 # Pydantic Models
 # -------------------------------
 
 class FavoriteIn(BaseModel):
-    item_type: str  # 'player' or 'game'
+    item_type: str
     item_id: int
 
-class Player(BaseModel):
+class Performance(BaseModel):
+    performance_id: int
     player_id: int
-    first_name: str
-    last_name: str
-    position: Optional[str] = None
-    jersey_number: Optional[int] = None
-    year: Optional[str] = None
-    age: Optional[int] = None
-    height: Optional[float] = None
-    weight: Optional[float] = None
-    games_played: int
-    games_started: int
-    minutes: int
-    minutes_per_game: float
-    fg_made: int
-    fg_attempts: int
-    fg_pct: float
-    three_made: int
-    three_attempts: int
-    three_pct: float
-    ft_made: int
-    ft_attempts: int
-    ft_pct: float
-    off_rebounds: int
-    def_rebounds: int
-    total_rebounds: int
-    rebounds_per_game: float
-    personal_fouls: int
-    dq: int
+    game_id: int
+    points: int
+    rebounds: int
     assists: int
     turnovers: int
     blocks: int
-    steals: int
-    points: int
-    points_per_game: float
+    minutes_played: float
     created_at: datetime
+
+class PlayerExtended(BaseModel):
+    player_id: int
+    name: str
+    position: Optional[str]
+    jersey_number: Optional[int]
+    weight: Optional[float]
+    height: Optional[float]
+    year: Optional[str]
+    age: Optional[int]
+    created_at: datetime
+    performances: List[Performance] = []
 
 class Game(BaseModel):
     game_id: int
     game_date: datetime
     opponent: str
-    location: Optional[str] = None
+    location: Optional[str]
     team_score: int
     opponent_score: int
-    attendance: Optional[int] = None
+    attendance: Optional[int]
     created_at: datetime
 
 class Injury(BaseModel):
     injury_id: int
     player_id: int
+    name: str
     injury_type: str
-    injury_date: Optional[datetime] = None
-    recovery_status: Optional[str] = None
-    expected_return: Optional[datetime] = None
+    injury_date: Optional[datetime]
+    recovery_status: Optional[str]
+    expected_return: Optional[datetime]
     created_at: datetime
 
 # -------------------------------
-# Database Connection Helper
+# Database
 # -------------------------------
+
 def get_db_connection():
     try:
-        return mysql.connector.connect(
-            host=MYSQL_HOST,
-            user=MYSQL_USER,
-            password=MYSQL_PASSWORD,
-            database=MYSQL_DATABASE
-        )
-    except Error as e:
-        print(f"Error connecting to MySQL: {e}")
+        conn = sqlite3.connect(SQLITE_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.Error as e:
+        print(f"SQLite error: {e}")
         return None
 
 # -------------------------------
-# API Endpoints
+# Endpoints
 # -------------------------------
 
-@app.get("/", summary="Root endpoint")
+@app.get("/")
 def read_root():
     return {"message": "Welcome to the Basketball API"}
 
-@app.get("/random-player", response_model=Player)
+@app.get("/random-player", response_model=PlayerExtended)
 def get_random_player():
     conn = get_db_connection()
     if not conn:
-        raise HTTPException(status_code=500, detail="Database connection error")
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute("SELECT * FROM players ORDER BY RAND() LIMIT 1")
-        player = cursor.fetchone()
-        if not player:
-            raise HTTPException(status_code=404, detail="No player found")
-        return player
-    except Error as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
+        raise HTTPException(500, "DB connection failed")
+    cur = conn.cursor()
+    cur.execute("SELECT *, first_name || ' ' || last_name AS name FROM players ORDER BY RANDOM() LIMIT 1")
+    row = cur.fetchone()
+    if row:
+        player_id = row["player_id"]
+        cur.execute("SELECT * FROM performances WHERE player_id = ?", (player_id,))
+        performances = [dict(p) for p in cur.fetchall()]
+        return {
+            "player_id": row["player_id"],
+            "name": row["name"],
+            "position": row["position"],
+            "jersey_number": row["jersey_number"],
+            "weight": row["weight"],
+            "height": row["height"],
+            "year": row["year"],
+            "age": row["age"],
+            "created_at": row["created_at"],
+            "performances": performances
+        }
+    else:
+        raise HTTPException(404, "No player found")
+    conn.close()
 
-@app.get("/players", response_model=List[Player])
+@app.get("/players", response_model=List[PlayerExtended])
 def get_all_players():
     conn = get_db_connection()
     if not conn:
-        raise HTTPException(status_code=500, detail="Database connection error")
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute("SELECT * FROM players ORDER BY first_name, last_name")
-        return cursor.fetchall()
-    except Error as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
+        raise HTTPException(500, "DB connection failed")
+    cur = conn.cursor()
+    cur.execute("SELECT *, first_name || ' ' || last_name AS name FROM players ORDER BY first_name ASC, last_name ASC")
+    players = cur.fetchall()
+    results = []
+    for row in players:
+        player_id = row["player_id"]
+        cur.execute("SELECT * FROM performances WHERE player_id = ?", (player_id,))
+        performances = [dict(p) for p in cur.fetchall()]
+        results.append({
+            "player_id": row["player_id"],
+            "name": row["name"],
+            "position": row["position"],
+            "jersey_number": row["jersey_number"],
+            "weight": row["weight"],
+            "height": row["height"],
+            "year": row["year"],
+            "age": row["age"],
+            "created_at": row["created_at"],
+            "performances": performances
+        })
+    conn.close()
+    return results
 
 @app.get("/random-game", response_model=Game)
 def get_random_game():
     conn = get_db_connection()
     if not conn:
-        raise HTTPException(status_code=500, detail="Database connection error")
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute("SELECT * FROM games ORDER BY RAND() LIMIT 1")
-        game = cursor.fetchone()
-        if not game:
-            raise HTTPException(status_code=404, detail="No game found")
-        return game
-    except Error as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
+        raise HTTPException(500, "DB connection failed")
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM games ORDER BY RANDOM() LIMIT 1")
+    row = cur.fetchone()
+    conn.close()
+    if row:
+        return dict(row)
+    raise HTTPException(404, "No game found")
 
 @app.get("/games", response_model=List[Game])
 def get_all_games():
     conn = get_db_connection()
     if not conn:
-        raise HTTPException(status_code=500, detail="Database connection error")
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute("SELECT * FROM games ORDER BY game_date DESC")
-        return cursor.fetchall()
-    except Error as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
+        raise HTTPException(500, "DB connection failed")
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM games ORDER BY game_date DESC")
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
 
 @app.get("/injuries", response_model=List[Injury])
 def get_all_injuries():
     conn = get_db_connection()
     if not conn:
-        raise HTTPException(status_code=500, detail="Database connection error")
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute("SELECT * FROM injuries ORDER BY injury_date DESC")
-        return cursor.fetchall()
-    except Error as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
-
-# -------------------------------
-# Favorites Endpoints
-# -------------------------------
+        raise HTTPException(500, "DB connection failed")
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT i.*, p.first_name || ' ' || p.last_name AS name
+        FROM injuries i
+        JOIN players p ON i.player_id = p.player_id
+        ORDER BY i.injury_date DESC
+    """)
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
 
 @app.post("/favorites")
 def add_favorite(fav: FavoriteIn):
-    user_id = 1  # placeholder until auth is implemented
+    user_id = 1
     conn = get_db_connection()
-    if not conn:
-        raise HTTPException(status_code=500, detail="DB connection error")
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO favorites (user_id, item_type, item_id) VALUES (%s, %s, %s)",
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO favorites (user_id, item_type, item_id) VALUES (?, ?, ?)",
         (user_id, fav.item_type, fav.item_id)
     )
     conn.commit()
-    fav_id = cursor.lastrowid
-    cursor.close()
+    fav_id = cur.lastrowid
+    cur.close()
     conn.close()
     return {"favorite_id": fav_id}
 
@@ -210,13 +196,13 @@ def add_favorite(fav: FavoriteIn):
 def remove_favorite(favorite_id: int):
     user_id = 1
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "DELETE FROM favorites WHERE favorite_id = %s AND user_id = %s",
+    cur = conn.cursor()
+    cur.execute(
+        "DELETE FROM favorites WHERE favorite_id = ? AND user_id = ?",
         (favorite_id, user_id)
     )
     conn.commit()
-    cursor.close()
+    cur.close()
     conn.close()
     return {"deleted": True}
 
@@ -224,18 +210,18 @@ def remove_favorite(favorite_id: int):
 def list_favorites(item_type: Optional[str] = None):
     user_id = 1
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cur = conn.cursor()
     if item_type:
-        cursor.execute(
-            "SELECT * FROM favorites WHERE user_id = %s AND item_type = %s ORDER BY created_at DESC",
+        cur.execute(
+            "SELECT * FROM favorites WHERE user_id = ? AND item_type = ? ORDER BY created_at DESC",
             (user_id, item_type)
         )
     else:
-        cursor.execute(
-            "SELECT * FROM favorites WHERE user_id = %s ORDER BY created_at DESC",
+        cur.execute(
+            "SELECT * FROM favorites WHERE user_id = ? ORDER BY created_at DESC",
             (user_id,)
         )
-    results = cursor.fetchall()
-    cursor.close()
+    rows = cur.fetchall()
+    cur.close()
     conn.close()
-    return results
+    return [dict(row) for row in rows]

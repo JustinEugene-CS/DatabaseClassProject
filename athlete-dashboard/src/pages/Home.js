@@ -29,7 +29,7 @@ const Home = () => {
             borderRadius: 8,
             boxShadow: '0 0 5px rgba(0,0,0,0.1)'
           }}>
-            <h3>{randomPlayer.first_name} {randomPlayer.last_name}</h3>
+            <h3>{randomPlayer.name}</h3>
             <p><strong>Position:</strong> {randomPlayer.position || 'N/A'}</p>
             <p><strong>Class:</strong> {randomPlayer.year}</p>
             <p><strong>PPG:</strong> {randomPlayer.points_per_game}</p>
