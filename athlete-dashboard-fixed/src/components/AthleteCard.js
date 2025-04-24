@@ -64,11 +64,13 @@ const AthleteCard = ({ player }) => {
 
       <hr />
 
-      <p><strong>Games Played:</strong> {player.games_played}</p>
-      <p><strong>Points/Game:</strong> {player.points_per_game}</p>
-      <p><strong>Rebounds/Game:</strong> {player.rebounds_per_game}</p>
-      <p><strong>Assists:</strong> {player.assists}</p>
-      <p><strong>FG%:</strong> {(player.fg_pct * 100).toFixed(1)}%</p>
+      <p><strong>Games Played:</strong> {player.games_played ?? 'N/A'}</p>
+      <p><strong>Points/Game:</strong> {player.points_per_game ?? 'N/A'}</p>
+      <p><strong>Rebounds/Game:</strong> {player.rebounds_per_game ?? 'N/A'}</p>
+      <p><strong>Assists:</strong> {player.assists ?? 'N/A'}</p>
+      <p><strong>FG%:</strong> 
+        {isNaN(player.fg_pct) || player.fg_pct === null ? 'N/A' : `${(player.fg_pct * 100).toFixed(1)}%`}
+      </p>
     </div>
   );
 };

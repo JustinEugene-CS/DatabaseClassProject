@@ -1,44 +1,44 @@
-from typing import List, Optional, Dict
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import List, Optional, Dict
 import sqlite3
+import math
 from datetime import datetime
 
 app = FastAPI()
 
-SQLITE_DB_PATH = "basketdb.sqlite3"
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# -------------------------------
-# Pydantic Models
-# -------------------------------
+SQLITE_DB_PATH = "../sql/basketdb.sqlite3"
 
 class FavoriteIn(BaseModel):
     item_type: str
     item_id: int
 
-class Performance(BaseModel):
-    performance_id: int
-    player_id: int
-    game_id: int
-    points: int
-    rebounds: int
-    assists: int
-    turnovers: int
-    blocks: int
-    minutes_played: float
-    created_at: datetime
-
 class PlayerExtended(BaseModel):
     player_id: int
     name: str
-    position: Optional[str]
     jersey_number: Optional[int]
-    weight: Optional[float]
-    height: Optional[float]
+    position: Optional[str]
     year: Optional[str]
     age: Optional[int]
+    height: Optional[float]
+    weight: Optional[float]
+    points: Optional[int]
+    points_per_game: Optional[float]
+    rebounds: Optional[int]
+    rebounds_per_game: Optional[float]
+    assists: Optional[int]
+    fg_pct: Optional[float]
+    games_played: Optional[int]
     created_at: datetime
-    performances: List[Performance] = []
 
 class Game(BaseModel):
     game_id: int
@@ -60,10 +60,6 @@ class Injury(BaseModel):
     expected_return: Optional[datetime]
     created_at: datetime
 
-# -------------------------------
-# Database
-# -------------------------------
-
 def get_db_connection():
     try:
         conn = sqlite3.connect(SQLITE_DB_PATH)
@@ -73,41 +69,60 @@ def get_db_connection():
         print(f"SQLite error: {e}")
         return None
 
-# -------------------------------
-# Endpoints
-# -------------------------------
-
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Basketball API"}
 
+@app.get("/debug-players")
+def debug_players():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM players LIMIT 5")
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
 @app.get("/random-player", response_model=PlayerExtended)
 def get_random_player():
+    print("🔍 Hitting /random-player endpoint")
     conn = get_db_connection()
     if not conn:
+        print("❌ DB connection failed")
         raise HTTPException(500, "DB connection failed")
+    
     cur = conn.cursor()
-    cur.execute("SELECT *, first_name || ' ' || last_name AS name FROM players ORDER BY RANDOM() LIMIT 1")
-    row = cur.fetchone()
-    if row:
-        player_id = row["player_id"]
-        cur.execute("SELECT * FROM performances WHERE player_id = ?", (player_id,))
-        performances = [dict(p) for p in cur.fetchall()]
+    try:
+        cur.execute("SELECT *, first_name || ' ' || last_name AS name FROM players ORDER BY RANDOM() LIMIT 1")
+        row = cur.fetchone()
+        if not row:
+            print("❌ No player found in query")
+            raise HTTPException(404, "No player found")
+        
+        print(f"✅ Found player: {row['name']} (ID: {row['player_id']})")
+
         return {
             "player_id": row["player_id"],
             "name": row["name"],
-            "position": row["position"],
             "jersey_number": row["jersey_number"],
-            "weight": row["weight"],
-            "height": row["height"],
+            "position": row["position"],
             "year": row["year"],
             "age": row["age"],
-            "created_at": row["created_at"],
-            "performances": performances
+            "height": row["height"],
+            "weight": row["weight"],
+            "points": row["points"],
+            "points_per_game": math.floor(row["points_per_game"]) if row["points_per_game"] is not None else None,
+            "rebounds": row["total_rebounds"],
+            "rebounds_per_game": math.floor(row["rebounds_per_game"]) if row["rebounds_per_game"] is not None else None,
+            "assists": row["assists"],
+            "fg_pct": row["fg_pct"],
+            "games_played": row["games_played"],
+            "created_at": row["created_at"]
         }
-    else:
-        raise HTTPException(404, "No player found")
-    conn.close()
+    except Exception as e:
+        print("❌ Exception occurred in /random-player:", e)
+        raise HTTPException(500, "Something went wrong")
+    finally:
+        conn.close()
 
 @app.get("/players", response_model=List[PlayerExtended])
 def get_all_players():
@@ -115,27 +130,30 @@ def get_all_players():
     if not conn:
         raise HTTPException(500, "DB connection failed")
     cur = conn.cursor()
-    cur.execute("SELECT *, first_name || ' ' || last_name AS name FROM players ORDER BY first_name ASC, last_name ASC")
-    players = cur.fetchall()
-    results = []
-    for row in players:
-        player_id = row["player_id"]
-        cur.execute("SELECT * FROM performances WHERE player_id = ?", (player_id,))
-        performances = [dict(p) for p in cur.fetchall()]
-        results.append({
-            "player_id": row["player_id"],
-            "name": row["name"],
-            "position": row["position"],
-            "jersey_number": row["jersey_number"],
-            "weight": row["weight"],
-            "height": row["height"],
-            "year": row["year"],
-            "age": row["age"],
-            "created_at": row["created_at"],
-            "performances": performances
-        })
+    cur.execute("SELECT *, first_name || ' ' || last_name AS name FROM players ORDER BY first_name, last_name")
+    rows = cur.fetchall()
     conn.close()
-    return results
+    return [
+    {
+        "player_id": row["player_id"],
+        "name": row["first_name"] + " " + row["last_name"],
+        "jersey_number": row["jersey_number"],
+        "position": row["position"],
+        "year": row["year"],
+        "age": row["age"],
+        "height": row["height"],
+        "weight": row["weight"],
+        "points": row["points"],
+        "points_per_game": math.floor(row["points_per_game"]) if row["points_per_game"] is not None else None,
+        "rebounds": row["total_rebounds"],
+        "rebounds_per_game": math.floor(row["rebounds_per_game"]) if row["rebounds_per_game"] is not None else None,
+        "assists": row["assists"],
+        "fg_pct": row["fg_pct"],
+        "games_played": row["games_played"],
+        "created_at": row["created_at"]
+    }
+    for row in rows
+]
 
 @app.get("/random-game", response_model=Game)
 def get_random_game():

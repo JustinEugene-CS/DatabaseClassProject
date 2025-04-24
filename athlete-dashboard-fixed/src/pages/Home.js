@@ -29,12 +29,14 @@ const Home = () => {
             borderRadius: 8,
             boxShadow: '0 0 5px rgba(0,0,0,0.1)'
           }}>
-            <h3>{randomPlayer.name}</h3>
+            <h3>#{randomPlayer.jersey_number ?? 'N/A'} — {randomPlayer.name}</h3>
             <p><strong>Position:</strong> {randomPlayer.position || 'N/A'}</p>
-            <p><strong>Class:</strong> {randomPlayer.year}</p>
-            <p><strong>PPG:</strong> {randomPlayer.points_per_game}</p>
-            <p><strong>RPG:</strong> {randomPlayer.rebounds_per_game}</p>
-            <p><strong>APG:</strong> {randomPlayer.assists}</p>
+            <p><strong>Class:</strong> {randomPlayer.year || 'N/A'}</p>
+            <p><strong>Points:</strong> {randomPlayer.points ?? 'N/A'}</p>
+            <p><strong>Rebounds:</strong> {randomPlayer.rebounds ?? 'N/A'}</p>
+            <p><strong>Assists:</strong> {randomPlayer.assists ?? 'N/A'}</p>
+            <p><strong>Height:</strong> {randomPlayer.height ? `${randomPlayer.height} in` : 'N/A'}</p>
+            <p><strong>Weight:</strong> {randomPlayer.weight ? `${randomPlayer.weight} lbs` : 'N/A'}</p>
           </div>
         ) : (
           <p>Loading random player...</p>

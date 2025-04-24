@@ -6,6 +6,7 @@ import Injuries from './pages/Injuries';
 import Games from './pages/Games';
 import Favorites from './pages/Favorites';
 import Login from './pages/Login';
+import './App.css'; // Keep this for styling
 
 function App() {
   return (

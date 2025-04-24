@@ -14,13 +14,16 @@ const Athletes = () => {
   }, []);
 
   const filteredPlayers = players.filter(player =>
-    player.name.toLowerCase().includes(searchTerm.toLowerCase())
+    player.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="container">
       <h2>Players</h2>
-      <SearchBar placeholder="Search players by name..." onSearch={setSearchTerm} />
+      <SearchBar
+        placeholder="Search players by name..."
+        onSearch={setSearchTerm}
+      />
       {filteredPlayers.length > 0 ? (
         filteredPlayers.map(player => (
           <AthleteCard key={player.player_id} player={player} />
