@@ -1,16 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&display=swap');
+
+/* Default body styling */
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background-color: #fefefe;
+  font-family: 'Lato', 'Roboto', 'Segoe UI', sans-serif;
+  background-color: #f4f4f4;
+  color: #002855;
 }
 
+/* Navbar styling */
 .navbar {
-  background-color: #002855; /* Navy */
+  background-color: #002855; /* MTSU Blue */
   padding: 10px;
   display: flex;
-  justify-content: center;
+  justify-content: space-between; /* This will push items to the left and right */
+  align-items: center;
 }
 
+/* Navbar link styling */
 .nav-link {
   color: #FFB612; /* Gold */
   text-decoration: none;
@@ -22,6 +29,89 @@ body {
   text-decoration: underline;
 }
 
+/* Main container styling */
 .container {
   padding: 20px;
+}
+
+/* Card component styling */
+.card {
+  background-color: #ffffff;
+  padding: 20px;
+  border-left: 6px solid #002855;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 8px rgba(0, 40, 85, 0.1);
+  transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+}
+
+.card h3 {
+  color: #002855;
+  margin-top: 0;
+}
+
+.card p {
+  font-size: 1rem;
+  margin: 5px 0;
+}
+
+/* Section title styling */
+.section-title {
+  color: #002855;
+  border-bottom: 2px solid #FFB612;
+  padding-bottom: 5px;
+  margin-bottom: 15px;
+}
+
+/* Header styling with sporty font */
+h1, h2 {
+  color: #002855;
+  font-family: 'Bangers', sans-serif; /* Apply sporty font */
+  font-weight: 700;
+  margin-bottom: 15px;
+  text-transform: uppercase; /* Make text uppercase */
+  letter-spacing: 2px; /* Add letter spacing */
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2); /* Add subtle text shadow */
+}
+
+/* Additional header styles */
+h2 {
+  font-size: 2rem;
+}
+
+h3 {
+  color: #0066CC;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+}
+
+/* Strong text styling */
+strong {
+  color: #002855;
+}
+
+/* Section spacing */
+.section {
+  margin-top: 40px;
+}
+
+/* Link styling */
+a {
+  color: #0066CC;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* MTSU Logo for Navbar */
+.navbar img {
+  width: 50px;
+  height: auto;
+  margin-left: 20px; /* Add space between the navbar content and logo */
 }

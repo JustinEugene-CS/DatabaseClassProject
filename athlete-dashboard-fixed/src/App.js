@@ -12,12 +12,19 @@ function App() {
   return (
     <div>
       <nav className="navbar">
-        <NavLink to="/" className="nav-link" end>Home</NavLink>
-        <NavLink to="/athletes" className="nav-link">Athletes</NavLink>
-        <NavLink to="/injuries" className="nav-link">Injuries</NavLink>
-        <NavLink to="/games" className="nav-link">Games</NavLink>
-        <NavLink to="/favorites" className="nav-link">Favorites</NavLink>
-        <NavLink to="/login" className="nav-link">Login</NavLink>
+        <div className="nav-links">
+          <NavLink to="/" className="nav-link" end>Home</NavLink>
+          <NavLink to="/athletes" className="nav-link">Athletes</NavLink>
+          <NavLink to="/injuries" className="nav-link">Injuries</NavLink>
+          <NavLink to="/games" className="nav-link">Games</NavLink>
+          <NavLink to="/favorites" className="nav-link">Favorites</NavLink>
+          <NavLink to="/login" className="nav-link">Login</NavLink>
+        </div>
+        <img
+          src="https://upload.wikimedia.org/wikipedia/en/5/50/Mt_blue_raiders_logo.png"
+          alt="MTSU Logo"
+          className="navbar-logo"
+        />
       </nav>
       <Routes>
         <Route path="/" element={<Home />} />

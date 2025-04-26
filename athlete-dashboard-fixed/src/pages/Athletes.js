@@ -26,7 +26,10 @@ const Athletes = () => {
       />
       {filteredPlayers.length > 0 ? (
         filteredPlayers.map(player => (
-          <AthleteCard key={player.player_id} player={player} />
+          <div key={player.player_id} style={{ marginBottom: '20px' }}>
+            <h3>{player.name}</h3>  {/* Displaying player's name here */}
+            <AthleteCard player={player} />
+          </div>
         ))
       ) : (
         <p>No players found.</p>

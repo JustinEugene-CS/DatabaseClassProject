@@ -39,6 +39,8 @@ class PlayerExtended(BaseModel):
     fg_pct: Optional[float]
     games_played: Optional[int]
     created_at: datetime
+    image_url: Optional[str] 
+    bio: Optional[str]
 
 class Game(BaseModel):
     game_id: int
@@ -48,6 +50,7 @@ class Game(BaseModel):
     team_score: int
     opponent_score: int
     attendance: Optional[int]
+    opponent_logo: Optional[str]
     created_at: datetime
 
 class Injury(BaseModel):
@@ -94,30 +97,32 @@ def get_random_player():
     try:
         cur.execute("SELECT *, first_name || ' ' || last_name AS name FROM players ORDER BY RANDOM() LIMIT 1")
         row = cur.fetchone()
-        if not row:
+        
+        if row:
+
+            return {
+                "player_id": row["player_id"],
+                "name": row["name"],
+                "jersey_number": row["jersey_number"],
+                "position": row["position"],
+                "year": row["year"],
+                "age": row["age"],
+                "height": row["height"],
+                "weight": row["weight"],
+                "points": row["points"],
+                "points_per_game": math.floor(row["points_per_game"]) if row["points_per_game"] is not None else None,
+                "rebounds": row["total_rebounds"],
+                "rebounds_per_game": math.floor(row["rebounds_per_game"]) if row["rebounds_per_game"] is not None else None,
+                "assists": row["assists"],
+                "fg_pct": row["fg_pct"],
+                "games_played": row["games_played"],
+                "created_at": row["created_at"],
+                "image_url": row["image_url"] if row["image_url"] else None,
+                "bio": row["bio"] if row["bio"] else None
+            }
+        else:
             print("❌ No player found in query")
             raise HTTPException(404, "No player found")
-        
-        print(f"✅ Found player: {row['name']} (ID: {row['player_id']})")
-
-        return {
-            "player_id": row["player_id"],
-            "name": row["name"],
-            "jersey_number": row["jersey_number"],
-            "position": row["position"],
-            "year": row["year"],
-            "age": row["age"],
-            "height": row["height"],
-            "weight": row["weight"],
-            "points": row["points"],
-            "points_per_game": math.floor(row["points_per_game"]) if row["points_per_game"] is not None else None,
-            "rebounds": row["total_rebounds"],
-            "rebounds_per_game": math.floor(row["rebounds_per_game"]) if row["rebounds_per_game"] is not None else None,
-            "assists": row["assists"],
-            "fg_pct": row["fg_pct"],
-            "games_played": row["games_played"],
-            "created_at": row["created_at"]
-        }
     except Exception as e:
         print("❌ Exception occurred in /random-player:", e)
         raise HTTPException(500, "Something went wrong")
@@ -134,26 +139,28 @@ def get_all_players():
     rows = cur.fetchall()
     conn.close()
     return [
-    {
-        "player_id": row["player_id"],
-        "name": row["first_name"] + " " + row["last_name"],
-        "jersey_number": row["jersey_number"],
-        "position": row["position"],
-        "year": row["year"],
-        "age": row["age"],
-        "height": row["height"],
-        "weight": row["weight"],
-        "points": row["points"],
-        "points_per_game": math.floor(row["points_per_game"]) if row["points_per_game"] is not None else None,
-        "rebounds": row["total_rebounds"],
-        "rebounds_per_game": math.floor(row["rebounds_per_game"]) if row["rebounds_per_game"] is not None else None,
-        "assists": row["assists"],
-        "fg_pct": row["fg_pct"],
-        "games_played": row["games_played"],
-        "created_at": row["created_at"]
-    }
-    for row in rows
-]
+        {
+            "player_id": row["player_id"],
+            "name": row["first_name"] + " " + row["last_name"],
+            "jersey_number": row["jersey_number"],
+            "position": row["position"],
+            "year": row["year"],
+            "age": row["age"],
+            "height": row["height"],
+            "weight": row["weight"],
+            "points": row["points"],
+            "points_per_game": math.floor(row["points_per_game"]) if row["points_per_game"] is not None else None,
+            "rebounds": row["total_rebounds"],
+            "rebounds_per_game": math.floor(row["rebounds_per_game"]) if row["rebounds_per_game"] is not None else None,
+            "assists": row["assists"],
+            "fg_pct": row["fg_pct"],
+            "games_played": row["games_played"],
+            "created_at": row["created_at"],
+            "image_url": row["image_url"] if row["image_url"] else None,
+            "bio": row["bio"] if row["bio"] else None
+        }
+        for row in rows
+    ]
 
 @app.get("/random-game", response_model=Game)
 def get_random_game():
@@ -177,7 +184,20 @@ def get_all_games():
     cur.execute("SELECT * FROM games ORDER BY game_date DESC")
     rows = cur.fetchall()
     conn.close()
-    return [dict(row) for row in rows]
+    return [
+        {
+            "game_id": row["game_id"],
+            "game_date": row["game_date"],
+            "opponent": row["opponent"],
+            "location": row["location"],
+            "team_score": row["team_score"],
+            "opponent_score": row["opponent_score"],
+            "attendance": row["attendance"],
+            "opponent_logo": row["opponent_logo"],  # Send opponent_logo for each game
+            "created_at": row["created_at"]
+        }
+        for row in rows
+    ]
 
 @app.get("/injuries", response_model=List[Injury])
 def get_all_injuries():

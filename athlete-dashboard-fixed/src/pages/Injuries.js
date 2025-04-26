@@ -28,29 +28,36 @@ const Injuries = () => {
   const filteredInjuries = injuries
     .sort((a, b) => new Date(b.injury_date) - new Date(a.injury_date))
     .filter(injury =>
-      injury.injury_type.toLowerCase().includes(searchTerm.toLowerCase())
+      (injury.injury_type ?? '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
   return (
     <div className="container">
       <h2>Injuries</h2>
-      <SearchBar placeholder="Search injuries (e.g., 'ankle', 'shoulder')..." onSearch={setSearchTerm} />
+      <SearchBar
+        placeholder="Search injuries (e.g., 'ankle', 'shoulder')..."
+        onSearch={setSearchTerm}
+      />
+
       {filteredInjuries.length > 0 ? (
         filteredInjuries.map(injury => (
-          <div key={injury.injury_id} style={{
-            backgroundColor: '#fff',
-            padding: 16,
-            borderRadius: 8,
-            marginBottom: 16,
-            boxShadow: '0 0 5px rgba(0,0,0,0.1)'
-          }}>
-            <p><strong>Player:</strong> {injury.first_name} {injury.last_name}</p>
-            <p><strong>Injury Type:</strong> {injury.injury_type}</p>
-            <p><strong>Date:</strong> {new Date(injury.injury_date).toLocaleDateString()}</p>
+          <div
+            key={injury.injury_id}
+            style={{
+              backgroundColor: '#fff',
+              padding: 16,
+              borderRadius: 8,
+              marginBottom: 16,
+              boxShadow: '0 0 5px rgba(0,0,0,0.1)'
+            }}
+          >
+            <p><strong>Player:</strong> {injury.name}</p>
+            <p><strong>Injury Type:</strong> {injury.injury_type || 'N/A'}</p>
+            <p><strong>Date:</strong> {injury.injury_date ? new Date(injury.injury_date).toLocaleDateString() : 'N/A'}</p>
             <p>
               <strong>Recovery Status:</strong>{' '}
               <span style={{ color: getStatusColor(injury.recovery_status), fontWeight: 'bold' }}>
-                {injury.recovery_status || 'N/A'}
+                {injury.recovery_status ?? 'N/A'}
               </span>
             </p>
             <p><strong>Expected Return:</strong> {injury.expected_return ? new Date(injury.expected_return).toLocaleDateString() : 'N/A'}</p>

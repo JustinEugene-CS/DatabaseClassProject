@@ -42,8 +42,11 @@ CREATE TABLE players (
   steals INTEGER DEFAULT 0,
   points INTEGER DEFAULT 0,
   points_per_game REAL DEFAULT 0.0,
+  image_url TEXT,
+  bio TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
 
 CREATE TABLE games (
   game_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,6 +56,7 @@ CREATE TABLE games (
   team_score INTEGER DEFAULT 0,
   opponent_score INTEGER DEFAULT 0,
   attendance INTEGER,
+  opponent_logo TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
