@@ -74,13 +74,27 @@ const Home = () => {
                 objectFit: 'cover'
               }}
             />
-            <div>
+            <div style={{ flex: 1 }}>
               <p><strong>Date:</strong> {new Date(randomGame.game_date).toLocaleDateString()}</p>
               <p><strong>Opponent:</strong> {randomGame.opponent}</p>
               <p><strong>Location:</strong> {randomGame.location || 'N/A'}</p>
               <p><strong>Score:</strong> {randomGame.team_score} - {randomGame.opponent_score}</p>
               <p><strong>Attendance:</strong> {randomGame.attendance}</p>
             </div>
+
+            {/* Win or Lose Image */}
+            <img
+              src={randomGame.team_score > randomGame.opponent_score
+                ? 'https://static.vecteezy.com/system/resources/previews/010/288/196/non_2x/win-celebration-of-jackpot-lettering-isolated-on-white-colourful-text-effect-design-text-or-inscriptions-in-english-the-modern-and-creative-design-has-red-orange-yellow-colors-vector.jpg'
+                : 'https://thumb.ac-illust.com/3b/3be13ba99a48685ffb5ea17dd139a7cd_t.jpeg'
+              }
+              alt={randomGame.team_score > randomGame.opponent_score ? 'Win' : 'Lose'}
+              style={{
+                width: '150px',
+                height: 'auto',
+                marginLeft: '20px' // Space between the text and the image
+              }}
+            />
           </div>
         ) : (
           <p>...</p>

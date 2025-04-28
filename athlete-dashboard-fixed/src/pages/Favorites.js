@@ -3,25 +3,28 @@ import AthleteCard from '../components/AthleteCard';
 
 const Favorites = () => {
   const [playerFavs, setPlayerFavs] = useState([]);
-  const [gameFavs, setGameFavs]     = useState([]);
 
+  // Fetch favorites (players only) when the page loads
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/favorites?item_type=player')
-      .then(r => r.json())
-      .then(favs => {
-        Promise.all(
-          favs.map(f => fetch(`http://127.0.0.1:8000/players/${f.item_id}`).then(r => r.json()))
-        ).then(setPlayerFavs);
-      });
-
-    fetch('http://127.0.0.1:8000/favorites?item_type=game')
-      .then(r => r.json())
-      .then(favs => {
-        Promise.all(
-          favs.map(f => fetch(`http://127.0.0.1:8000/games/${f.item_id}`).then(r => r.json()))
-        ).then(setGameFavs);
-      });
+    fetchFavorites();
   }, []);
+
+  const fetchFavorites = () => {
+    // Fetch favorite players
+    fetch('http://127.0.0.1:8000/favorites')
+      .then(r => r.json())
+      .then(favs => {
+        // If the fetched favorites are valid, load player data for each favorite player
+        if (Array.isArray(favs)) {
+          Promise.all(
+            favs.map(f => fetch(`http://127.0.0.1:8000/players/${f.player_id}`).then(r => r.json()))
+          ).then(setPlayerFavs);
+        } else {
+          console.error("Invalid data format for player favorites:", favs);
+        }
+      })
+      .catch(err => console.error('Error fetching player favorites:', err));
+  };
 
   return (
     <div className="container">
@@ -29,18 +32,15 @@ const Favorites = () => {
 
       <section>
         <h3>Players</h3>
-        {playerFavs.map(p => <AthleteCard key={p.player_id} player={p} />)}
-      </section>
-
-      <section style={{ marginTop: 40 }}>
-        <h3>Games</h3>
-        {gameFavs.map(g => (
-          <div key={g.game_id} style={{ /* reuse your game card styles */ }}>
-            <p><strong>{new Date(g.game_date).toLocaleDateString()}</strong> vs {g.opponent}</p>
-            <p>Score: {g.team_score} – {g.opponent_score}</p>
-            <p>Attendance: {g.attendance}</p>
-          </div>
-        ))}
+        {playerFavs.length > 0 ? (
+          playerFavs.map(p => (
+            <div key={p.player_id} style={{ marginBottom: '20px' }}>
+              <AthleteCard player={p} />
+            </div>
+          ))
+        ) : (
+          <p>No favorite players found.</p>
+        )}
       </section>
     </div>
   );

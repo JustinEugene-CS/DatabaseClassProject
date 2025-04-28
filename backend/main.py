@@ -19,8 +19,8 @@ app.add_middleware(
 SQLITE_DB_PATH = "../sql/basketdb.sqlite3"
 
 class FavoriteIn(BaseModel):
-    item_type: str
-    item_id: int
+    player_id: int  # Player ID for the favorite
+    user_id: int    # User ID who favorited the player
 
 class PlayerExtended(BaseModel):
     player_id: int
@@ -63,6 +63,17 @@ class Injury(BaseModel):
     expected_return: Optional[datetime]
     created_at: datetime
 
+class PlayerGame(BaseModel):
+    game_id: int
+    game_date: datetime
+    opponent: str
+    team_score: int
+    opponent_score: int
+    attendance: Optional[int]
+    opponent_logo: Optional[str]
+    minutes_played: int  # MIN from player_game table
+    games_started: int   # GS from player_game table
+
 def get_db_connection():
     try:
         conn = sqlite3.connect(SQLITE_DB_PATH)
@@ -98,27 +109,40 @@ def get_random_player():
         cur.execute("SELECT *, first_name || ' ' || last_name AS name FROM players ORDER BY RANDOM() LIMIT 1")
         row = cur.fetchone()
         
-        if row:
 
+        if row:
             return {
                 "player_id": row["player_id"],
                 "name": row["name"],
-                "jersey_number": row["jersey_number"],
-                "position": row["position"],
-                "year": row["year"],
-                "age": row["age"],
-                "height": row["height"],
-                "weight": row["weight"],
-                "points": row["points"],
-                "points_per_game": math.floor(row["points_per_game"]) if row["points_per_game"] is not None else None,
-                "rebounds": row["total_rebounds"],
-                "rebounds_per_game": math.floor(row["rebounds_per_game"]) if row["rebounds_per_game"] is not None else None,
-                "assists": row["assists"],
-                "fg_pct": row["fg_pct"],
-                "games_played": row["games_played"],
+                "jersey_number": row["jersey_number"] if row["jersey_number"] is not None else 0,
+                "position": row["position"] if row["position"] is not None else "N/A",
+                "year": row["year"] if row["year"] is not None else "N/A",
+                "age": row["age"] if row["age"] is not None else 0,
+                "height": row["height"] if row["height"] is not None else 0.0,
+                "weight": row["weight"] if row["weight"] is not None else 0.0,
+                "points": row["points"] if row["points"] is not None else 0,
+                "points_per_game": math.floor(row["points_per_game"]) if row["points_per_game"] is not None else 0.0,
+                "rebounds": row["total_rebounds"] if row["total_rebounds"] is not None else 0,
+                "rebounds_per_game": math.floor(row["rebounds_per_game"]) if row["rebounds_per_game"] is not None else 0.0,
+                "assists": row["assists"] if row["assists"] is not None else 0,
+                "fg_pct": row["fg_pct"] if row["fg_pct"] is not None else 0.0,
+                "games_played": row["games_played"] if row["games_played"] is not None else 0,
+                "games_started": row["games_started"] if row["games_started"] is not None else 0,  # Ensure this field is included
+                "minutes": row["minutes"] if row["minutes"] is not None else 0,  # Ensure this field is included
+                "minutes_per_game": row["minutes_per_game"] if row["minutes_per_game"] is not None else 0.0,  # Ensure this field is included
+                "fg_made": row["fg_made"] if row["fg_made"] is not None else 0,  # Ensure this field is included
+                "three_made": row["three_made"] if row["three_made"] is not None else 0,
+                "ft_made": row["ft_made"] if row["ft_made"] is not None else 0,
+                "off_rebounds": row["off_rebounds"] if row["off_rebounds"] is not None else 0,
+                "def_rebounds": row["def_rebounds"] if row["def_rebounds"] is not None else 0,
+                "total_rebounds": row["total_rebounds"] if row["total_rebounds"] is not None else 0,
+                "personal_fouls": row["personal_fouls"] if row["personal_fouls"] is not None else 0,
+                "turnovers": row["turnovers"] if row["turnovers"] is not None else 0,
+                "blocks": row["blocks"] if row["blocks"] is not None else 0,
+                "steals": row["steals"] if row["steals"] is not None else 0,
+                "bio": row["bio"] if row["bio"] else "No bio available",
                 "created_at": row["created_at"],
                 "image_url": row["image_url"] if row["image_url"] else None,
-                "bio": row["bio"] if row["bio"] else None
             }
         else:
             print("❌ No player found in query")
@@ -141,23 +165,36 @@ def get_all_players():
     return [
         {
             "player_id": row["player_id"],
-            "name": row["first_name"] + " " + row["last_name"],
-            "jersey_number": row["jersey_number"],
-            "position": row["position"],
-            "year": row["year"],
-            "age": row["age"],
-            "height": row["height"],
-            "weight": row["weight"],
-            "points": row["points"],
-            "points_per_game": math.floor(row["points_per_game"]) if row["points_per_game"] is not None else None,
-            "rebounds": row["total_rebounds"],
-            "rebounds_per_game": math.floor(row["rebounds_per_game"]) if row["rebounds_per_game"] is not None else None,
-            "assists": row["assists"],
-            "fg_pct": row["fg_pct"],
-            "games_played": row["games_played"],
-            "created_at": row["created_at"],
-            "image_url": row["image_url"] if row["image_url"] else None,
-            "bio": row["bio"] if row["bio"] else None
+                "name": row["name"],
+                "jersey_number": row["jersey_number"] if row["jersey_number"] is not None else 0,
+                "position": row["position"] if row["position"] is not None else "N/A",
+                "year": row["year"] if row["year"] is not None else "N/A",
+                "age": row["age"] if row["age"] is not None else 0,
+                "height": row["height"] if row["height"] is not None else 0.0,
+                "weight": row["weight"] if row["weight"] is not None else 0.0,
+                "points": row["points"] if row["points"] is not None else 0,
+                "points_per_game": math.floor(row["points_per_game"]) if row["points_per_game"] is not None else 0.0,
+                "rebounds": row["total_rebounds"] if row["total_rebounds"] is not None else 0,
+                "rebounds_per_game": math.floor(row["rebounds_per_game"]) if row["rebounds_per_game"] is not None else 0.0,
+                "assists": row["assists"] if row["assists"] is not None else 0,
+                "fg_pct": row["fg_pct"] if row["fg_pct"] is not None else 0.0,
+                "games_played": row["games_played"] if row["games_played"] is not None else 0,
+                "games_started": row["games_started"] if row["games_started"] is not None else 0,  # Ensure this field is included
+                "minutes": row["minutes"] if row["minutes"] is not None else 0,  # Ensure this field is included
+                "minutes_per_game": row["minutes_per_game"] if row["minutes_per_game"] is not None else 0.0,  # Ensure this field is included
+                "fg_made": row["fg_made"] if row["fg_made"] is not None else 0,  # Ensure this field is included
+                "three_made": row["three_made"] if row["three_made"] is not None else 0,
+                "ft_made": row["ft_made"] if row["ft_made"] is not None else 0,
+                "off_rebounds": row["off_rebounds"] if row["off_rebounds"] is not None else 0,
+                "def_rebounds": row["def_rebounds"] if row["def_rebounds"] is not None else 0,
+                "total_rebounds": row["total_rebounds"] if row["total_rebounds"] is not None else 0,
+                "personal_fouls": row["personal_fouls"] if row["personal_fouls"] is not None else 0,
+                "turnovers": row["turnovers"] if row["turnovers"] is not None else 0,
+                "blocks": row["blocks"] if row["blocks"] is not None else 0,
+                "steals": row["steals"] if row["steals"] is not None else 0,
+                "bio": row["bio"] if row["bio"] else "No bio available",
+                "created_at": row["created_at"],
+                "image_url": row["image_url"] if row["image_url"] else None,
         }
         for row in rows
     ]
@@ -217,49 +254,113 @@ def get_all_injuries():
 
 @app.post("/favorites")
 def add_favorite(fav: FavoriteIn):
-    user_id = 1
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO favorites (user_id, item_type, item_id) VALUES (?, ?, ?)",
-        (user_id, fav.item_type, fav.item_id)
-    )
-    conn.commit()
-    fav_id = cur.lastrowid
-    cur.close()
-    conn.close()
-    return {"favorite_id": fav_id}
 
-@app.delete("/favorites/{favorite_id}")
-def remove_favorite(favorite_id: int):
-    user_id = 1
+    try:
+        # Insert the favorite into the favorites table
+        cur.execute(
+            "INSERT INTO favorites (user_id, player_id) VALUES (?, ?)",
+            (fav.user_id, fav.player_id)
+        )
+        conn.commit()  # Commit the transaction
+
+        # Get the last inserted favorite_id (useful if you need to return it or use it)
+        favorite_id = cur.lastrowid
+        return {"favorite_id": favorite_id}  # Return the inserted favorite_id
+    except Exception as e:
+        print(f"❌ Error adding favorite: {e}")
+        raise HTTPException(500, "Error adding favorite")
+    finally:
+        conn.close()
+
+@app.delete("/favorites")
+def remove_favorite(fav: FavoriteIn):
+    user_id = fav.user_id  # Assuming the user_id is passed as part of the request
+    player_id = fav.player_id
+
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(
-        "DELETE FROM favorites WHERE favorite_id = ? AND user_id = ?",
-        (favorite_id, user_id)
-    )
-    conn.commit()
-    cur.close()
-    conn.close()
-    return {"deleted": True}
+
+    try:
+        # Delete the favorite entry where the player matches and the user_id is correct
+        cur.execute(
+            "DELETE FROM favorites WHERE player_id = ? AND user_id = ?",
+            (player_id, user_id)
+        )
+        conn.commit()
+        
+        if cur.rowcount == 0:
+            raise HTTPException(404, "Favorite not found")
+        
+        return {"deleted": True}
+    
+    except Exception as e:
+        print(f"Error removing favorite: {e}")
+        raise HTTPException(500, "Error removing favorite")
+    
+    finally:
+        cur.close()
+        conn.close()
 
 @app.get("/favorites", response_model=List[Dict])
-def list_favorites(item_type: Optional[str] = None):
-    user_id = 1
+def list_favorites():
+    user_id = 1  # Simulated user_id for now
     conn = get_db_connection()
     cur = conn.cursor()
-    if item_type:
-        cur.execute(
-            "SELECT * FROM favorites WHERE user_id = ? AND item_type = ? ORDER BY created_at DESC",
-            (user_id, item_type)
-        )
-    else:
+
+    try:
+        # Fetch favorites for this user
         cur.execute(
             "SELECT * FROM favorites WHERE user_id = ? ORDER BY created_at DESC",
             (user_id,)
         )
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    return [dict(row) for row in rows]
+        rows = cur.fetchall()
+        conn.close()
+
+        return [dict(row) for row in rows]
+
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail=f"Error fetching favorites: {e}")
+
+# Function to get a DB connection (not provided in the code snippet)
+def get_db_connection():
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+@app.get("/player-games/{player_id}")
+def get_player_games(player_id: int):
+    conn = get_db_connection()
+    if not conn:
+        raise HTTPException(500, "DB connection failed")
+
+    try:
+        # Query player_game table for games played by the player
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT pg.game_id, g.opponent_logo, pg.MIN as minutes_played, g.team_score, g.opponent_score
+            FROM player_game pg
+            JOIN games g ON pg.game_id = g.game_id
+            WHERE pg.player_id = ?
+        """, (player_id,))
+        
+        rows = cur.fetchall()
+        games = [
+            {
+                "game_id": row["game_id"],
+                "opponent_logo": row["opponent_logo"],
+                "minutes_played": row["minutes_played"],
+                "team_score": row["team_score"],
+                "opponent_score": row["opponent_score"]
+            }
+            for row in rows
+        ]
+        
+        return games
+    except Exception as e:
+        print(f"❌ Error fetching player games: {e}")
+        raise HTTPException(500, "Error fetching player games")
+    finally:
+        conn.close()

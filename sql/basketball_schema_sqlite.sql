@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS games;
 DROP TABLE IF EXISTS players;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS favorites;
+DROP TABLE IF EXISTS player_game;
 
 CREATE TABLE players (
   player_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,9 +82,19 @@ CREATE TABLE users (
 
 CREATE TABLE favorites (
   favorite_id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  item_type TEXT NOT NULL, -- 'player' or 'game'
-  item_id INTEGER NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id)
+  user_id INTEGER NOT NULL,         -- User who favorited
+  player_id INTEGER NOT NULL,       -- The player that was favorited
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Date and time when the favorite was added
+  FOREIGN KEY (user_id) REFERENCES users(id),     -- Linking user to users table
+  FOREIGN KEY (player_id) REFERENCES players(player_id)  -- Linking player to players table
+);
+
+CREATE TABLE player_game (
+    player_id INT NOT NULL,
+    game_id INT NOT NULL,
+    GS INT,  -- Games Started (1 for Yes, 0 for No)
+    MIN INT,  -- Minutes Played
+    PRIMARY KEY (player_id, game_id),  -- Composite Primary Key to ensure each player-game combination is unique
+    FOREIGN KEY (player_id) REFERENCES players(player_id),  -- Ensures player_id exists in players table
+    FOREIGN KEY (game_id) REFERENCES games(game_id)  -- Ensures game_id exists in games table
 );
