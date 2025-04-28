@@ -5,8 +5,19 @@ const Games = () => {
   const [games, setGames] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1); // Pagination state
+  const [showAddGameForm, setShowAddGameForm] = useState(false); // Toggle form for adding a game
+  const [newGame, setNewGame] = useState({
+    opponent: '',
+    team_score: '',
+    opponent_score: '',
+    game_date: '',
+    location: 'Home',
+    opponent_logo: '',
+  });
+
   const gamesPerPage = 5; // Number of games per page
 
+  // Fetch games from API
   useEffect(() => {
     fetch('http://127.0.0.1:8000/games')
       .then(res => res.json())
@@ -14,10 +25,13 @@ const Games = () => {
       .catch(err => console.error('Error fetching games:', err));
   }, []);
 
+  const userRole = localStorage.getItem('role');
+
   // Filter games based on search term
-  const filteredGames = games.filter(game =>
-    game.opponent.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    game.location.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredGames = games.filter(
+    game =>
+      game.opponent.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      game.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Get the games to display based on the current page
@@ -45,6 +59,49 @@ const Games = () => {
     setCurrentPage(1); // Reset page number to 1 when searching
   };
 
+  // Handle Add Game form submission
+  const handleAddGame = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('http://127.0.0.1:8000/add-game/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newGame),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setGames([...games, data]); // Add the new game to the list
+        setNewGame({}); // Reset the form after adding
+        setShowAddGameForm(false); // Hide the form
+      } else {
+        console.error('Error adding game:', data.detail);
+      }
+    } catch (error) {
+      console.error('Error adding game:', error);
+    }
+  };
+
+  // Handle Delete Game
+  const handleDeleteGame = async (gameId) => {
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/delete-game/${gameId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete game');
+      }
+
+      // Remove the deleted game from the state
+      setGames(games.filter(game => game.game_id !== gameId));
+    } catch (error) {
+      console.error('Error deleting game:', error);
+    }
+  };
+
   return (
     <div className="container">
       <h2>Games</h2>
@@ -53,13 +110,104 @@ const Games = () => {
         onSearch={handleSearch} // Use the updated search handler
       />
 
+      {/* Display Pagination Buttons at the top */}
+      <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+        {/* Previous Button */}
+        {currentPage > 1 && (
+          <button
+            onClick={prevPage}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#0066CC',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              marginRight: '10px'
+            }}
+          >
+            Previous
+          </button>
+        )}
+        
+        {/* Next Button */}
+        {indexOfLastGame < filteredGames.length && (
+          <button
+            onClick={nextPage}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#0066CC',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer'
+            }}
+          >
+            Next
+          </button>
+        )}
+      </div>
+
+      {/* Display "Add Game" button for coaches */}
+      {userRole === 'coach' && (
+        <div>
+          <button onClick={() => setShowAddGameForm(true)}>Add Game</button>
+          {showAddGameForm && (
+            <div>
+              <h3>New Game</h3>
+              <form onSubmit={handleAddGame}>
+                <input
+                  type="text"
+                  placeholder="Opponent"
+                  value={newGame.opponent}
+                  onChange={(e) => setNewGame({ ...newGame, opponent: e.target.value })}
+                />
+                <input
+                  type="number"
+                  placeholder="Team Score"
+                  value={newGame.team_score}
+                  onChange={(e) => setNewGame({ ...newGame, team_score: e.target.value })}
+                />
+                <input
+                  type="number"
+                  placeholder="Opponent Score"
+                  value={newGame.opponent_score}
+                  onChange={(e) => setNewGame({ ...newGame, opponent_score: e.target.value })}
+                />
+                <input
+                  type="date"
+                  placeholder="Date"
+                  value={newGame.game_date}
+                  onChange={(e) => setNewGame({ ...newGame, game_date: e.target.value })}
+                />
+                <select
+                  value={newGame.location}
+                  onChange={(e) => setNewGame({ ...newGame, location: e.target.value })}
+                >
+                  <option value="Home">Home</option>
+                  <option value="Away">Away</option>
+                </select>
+                <input
+                  type="url"
+                  placeholder="Opponent Logo URL"
+                  value={newGame.opponent_logo}
+                  onChange={(e) => setNewGame({ ...newGame, opponent_logo: e.target.value })}
+                />
+                <button type="submit">Add Game</button>
+              </form>
+            </div>
+          )}
+        </div>
+      )}
+
+
       {/* Display current games range and total */}
       <p>
         Showing {indexOfFirstGame + 1} - {Math.min(indexOfLastGame, filteredGames.length)} of {filteredGames.length} games
       </p>
 
       {currentGames.length > 0 ? (
-        currentGames.map(game => (
+        currentGames.map((game) => (
           <div
             key={game.game_id}
             style={{
@@ -68,9 +216,9 @@ const Games = () => {
               borderRadius: 8,
               marginBottom: 16,
               boxShadow: '0 0 5px rgba(0,0,0,0.1)',
-              display: 'flex', // Flexbox to align image with text
-              justifyContent: 'space-between', // Add space between text and image
-              alignItems: 'center'
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
             }}
           >
             <div style={{ flex: 1 }}>
@@ -143,9 +291,24 @@ const Games = () => {
               </div>
               <p><strong>Opponent:</strong> {game.opponent}</p>
               <p><strong>Score:</strong> {game.team_score} – {game.opponent_score}</p>
-              <p><strong>Attendance:</strong> {game.attendance ?? 'N/A'}</p>
               <p><strong>Game Type:</strong> {game.location === 'Home' ? 'Home Game' : 'Away Game'}</p>
             </div>
+
+            {userRole === 'coach' && (
+              <button
+                onClick={() => handleDeleteGame(game.game_id)}  // Here, handleDeleteGame is invoked
+                style={{
+                  padding: '5px 10px',
+                  backgroundColor: 'red',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                }}
+              >
+                Delete Game
+              </button>
+            )}
 
             {/* Win or Lose Image */}
             <img
@@ -161,6 +324,7 @@ const Games = () => {
               }}
             />
           </div>
+          
         ))
       ) : (
         <p>No games found.</p>

@@ -1,8 +1,8 @@
-fastapi            # For building the FastAPI application
-uvicorn            # ASGI server for running the FastAPI app
-sqlalchemy         # For database ORM (if using SQLAlchemy)
-mysql-connector-python  # MySQL driver for database connection
-pydantic           # For data validation and settings management
-python-dotenv      # For managing environment variables
-jose               # For handling JSON Web Tokens (optional, if using authentication)
-passlib[bcrypt]    # For password hashing (optional, if using authentication)
+fastapi==0.95.2            # For building the FastAPI application
+uvicorn==0.18.2            # ASGI server for running the FastAPI app
+sqlalchemy==2.0.14         # For database ORM (if using SQLAlchemy)
+mysql-connector-python==8.0.31  # MySQL driver for database connection
+pydantic==1.10.2           # For data validation and settings management
+python-dotenv==0.21.1      # For managing environment variables
+jose==3.3.0                # For handling JSON Web Tokens (optional, if using authentication)
+passlib[bcrypt]==1.7.4     # For password hashing (optional, if using authentication)

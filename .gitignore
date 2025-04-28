@@ -29,3 +29,9 @@ node_modules/
 
 # Log files
 *.log
+
+# Test coverage files (if applicable)
+.coverage
+.tox/
+.nox/
+.hypothesis/

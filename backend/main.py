@@ -1,10 +1,13 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Security
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 import sqlite3
 import math
-from datetime import datetime
+import jwt
+from datetime import datetime, timedelta
+from passlib.context import CryptContext
 
 app = FastAPI()
 
@@ -17,6 +20,29 @@ app.add_middleware(
 )
 
 SQLITE_DB_PATH = "../sql/basketdb.sqlite3"
+
+# JWT settings
+SECRET_KEY = "csci4150"
+ALGORITHM = "HS256"
+
+# Password hashing setup
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# OAuth2 password bearer for token handling
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+class User(BaseModel):
+    username: str
+    password: str
+    email: str  
+    role: str   
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class UserInDB(User):
+    hashed_password: str
 
 class FavoriteIn(BaseModel):
     player_id: int  # Player ID for the favorite
@@ -78,14 +104,118 @@ def get_db_connection():
     try:
         conn = sqlite3.connect(SQLITE_DB_PATH)
         conn.row_factory = sqlite3.Row
+        print("Database connection established")  # Debugging line
         return conn
     except sqlite3.Error as e:
-        print(f"SQLite error: {e}")
-        return None
+        print(f"Database connection error: {e}")
+        raise HTTPException(500, detail="Database connection error")
 
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Basketball API"}
+
+# Function to get the current user from the JWT token
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        # Decode the JWT token
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        role: str = payload.get("role")
+        
+        # If username or role is not found, raise credentials exception
+        if username is None:
+            raise credentials_exception
+        
+        return UserInDB(username=username, hashed_password="", role=role)
+    
+    except jwt.PyJWTError:
+        raise credentials_exception
+
+# JWT creation
+def create_access_token(data: dict, expires_delta: timedelta = timedelta(hours=1)):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + expires_delta
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+# Password hashing and verification
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+# Register User Endpoint
+@app.post("/register/")
+def register(user: User):
+    try:
+        print(f"Registering user: {user.username}")  # Debugging line
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if user exists
+        cursor.execute("SELECT * FROM users WHERE username = ?", (user.username,))
+        existing_user = cursor.fetchone()
+        print(f"Existing user: {existing_user}")  # Debugging line
+
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Username already taken")
+
+        # Hash the password and insert the new user into the database
+        hashed_password = hash_password(user.password)
+        cursor.execute(
+            "INSERT INTO users (username, email, hashed_password, role) VALUES (?, ?, ?, ?)",
+            (user.username, user.email, hashed_password, user.role)
+        )
+        
+        conn.commit()
+        print(f"User {user.username} registered successfully")  # Debugging line
+        conn.close()
+
+        # After successful registration, generate and return a JWT token
+        access_token = create_access_token(data={"sub": user.username, "role": user.role})
+        return {"access_token": access_token, "token_type": "bearer"}
+
+    except sqlite3.Error as e:
+        print(f"SQLite error during registration: {e}")
+        raise HTTPException(status_code=500, detail="Database error during registration")
+
+    except Exception as e:
+        print(f"Unexpected error during registration: {e}")
+        raise HTTPException(status_code=500, detail="User registration failed")
+
+# Login Endpoint
+@app.post("/login/")
+def login(user: UserLogin):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE username = ?", (user.username,))
+    db_user = cursor.fetchone()
+
+    if not db_user:
+        conn.close()
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # Verify the password
+    if not verify_password(user.password, db_user["hashed_password"]):
+        conn.close()
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # Create the JWT token
+    access_token = create_access_token(data={"sub": user.username, "role": db_user["role"]})
+    conn.close()
+    return {"access_token": access_token, "token_type": "bearer"}
+
+# Protected route (example)
+@app.get("/protected/")
+def protected_route(current_user: UserInDB = Depends(get_current_user)):
+    return {"message": f"Hello, {current_user.username}!"}
 
 @app.get("/debug-players")
 def debug_players():
@@ -364,3 +494,135 @@ def get_player_games(player_id: int):
         raise HTTPException(500, "Error fetching player games")
     finally:
         conn.close()
+
+@app.post("/add-game/")
+def add_game(game: Game, current_user: UserInDB = Depends(get_current_user)):
+    try:
+        # Ensure the user is a coach before adding a game
+        if current_user.role != "coach":
+            raise HTTPException(status_code=403, detail="Only coaches can add games.")
+
+        # Connect to the database
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Insert the new game into the games table
+        cursor.execute(
+            "INSERT INTO games (game_date, opponent, location, team_score, opponent_score, attendance, opponent_logo) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (game.game_date, game.opponent, game.location, game.team_score, game.opponent_score, game.attendance, game.opponent_logo)
+        )
+        
+        # Commit changes and close connection
+        conn.commit()
+        new_game_id = cursor.lastrowid
+        conn.close()
+
+        # Return the added game data (including the new game ID)
+        return {**game.dict(), "game_id": new_game_id}
+
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=f"Error adding game: {e}")
+    
+@app.delete("/delete-game/{game_id}")
+def delete_game(game_id: int, current_user: UserInDB = Depends(get_current_user)):
+    try:
+        # Ensure the user is a coach before deleting a game
+        if current_user.role != "coach":
+            raise HTTPException(status_code=403, detail="Only coaches can delete games.")
+
+        # Connect to the database
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if the game exists in the database
+        cursor.execute("SELECT * FROM games WHERE game_id = ?", (game_id,))
+        game = cursor.fetchone()
+        if not game:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Game not found.")
+
+        # Delete the game from the database
+        cursor.execute("DELETE FROM games WHERE game_id = ?", (game_id,))
+        conn.commit()
+        conn.close()
+
+        return {"message": f"Game {game_id} deleted successfully."}
+
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting game: {e}")
+    
+@app.post("/add-player/")
+def add_player(player: PlayerExtended, current_user: UserInDB = Depends(get_current_user)):
+    try:
+        # Ensure the user is a coach before adding a player
+        if current_user.role != "coach":
+            raise HTTPException(status_code=403, detail="Only coaches can add players.")
+
+        # Connect to the database
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Insert the new player into the players table
+        cursor.execute(
+            "INSERT INTO players (name, jersey_number, position, year, age, height, weight, points, points_per_game, rebounds, rebounds_per_game, assists, fg_pct, games_played, created_at, image_url, bio) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                player.name,
+                player.jersey_number,
+                player.position,
+                player.year,
+                player.age,
+                player.height,
+                player.weight,
+                player.points,
+                player.points_per_game,
+                player.rebounds,
+                player.rebounds_per_game,
+                player.assists,
+                player.fg_pct,
+                player.games_played,
+                datetime.utcnow(),  # Set current timestamp
+                player.image_url,
+                player.bio,
+            )
+        )
+        
+        # Commit changes and close connection
+        conn.commit()
+        new_player_id = cursor.lastrowid
+        conn.close()
+
+        # Return the added player data (including the new player ID)
+        return {**player.dict(), "player_id": new_player_id}
+
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=f"Error adding player: {e}")
+
+@app.delete("/delete-player/{player_id}")
+def delete_player(player_id: int, current_user: UserInDB = Depends(get_current_user)):
+    try:
+        # Ensure the user is a coach before deleting a player
+        if current_user.role != "coach":
+            raise HTTPException(status_code=403, detail="Only coaches can delete players.")
+
+        # Connect to the database
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if the player exists in the database
+        cursor.execute("SELECT * FROM players WHERE player_id = ?", (player_id,))
+        player = cursor.fetchone()
+        if not player:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Player not found.")
+
+        # Delete the player from the database
+        cursor.execute("DELETE FROM players WHERE player_id = ?", (player_id,))
+        conn.commit()
+        conn.close()
+
+        return {"message": f"Player {player_id} deleted successfully."}
+
+    except sqlite3.Error as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting player: {e}")
