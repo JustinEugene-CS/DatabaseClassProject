@@ -34,15 +34,17 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 class User(BaseModel):
     username: str
     password: str
-    email: str  
-    role: str   
+    email:    str
+    role:     str
 
 class UserLogin(BaseModel):
     username: str
     password: str
 
-class UserInDB(User):
-    hashed_password: str
+class UserInDB(BaseModel):
+    username:        str
+    role:            str
+    hashed_password: str = ""
 
 class FavoriteIn(BaseModel):
     player_id: int  # Player ID for the favorite
@@ -79,15 +81,31 @@ class Game(BaseModel):
     opponent_logo: Optional[str]
     created_at: datetime
 
+class GameCreate(BaseModel):
+    game_date: datetime
+    opponent: str
+    location:      Optional[str] = None
+    team_score:    int
+    opponent_score:int
+    attendance:    Optional[int] = None
+    opponent_logo: Optional[str] = None
+
 class Injury(BaseModel):
-    injury_id: int
-    player_id: int
-    name: str
-    injury_type: str
-    injury_date: Optional[datetime]
+    injury_id:       int
+    player_id:       int
+    name:            str       
+    injury_type:     str
+    injury_date:     Optional[datetime]
     recovery_status: Optional[str]
     expected_return: Optional[datetime]
-    created_at: datetime
+    created_at:      datetime
+
+class InjuryCreate(BaseModel):
+    player_id:       int
+    injury_type:     str
+    injury_date:     Optional[datetime] = None
+    recovery_status: Optional[str]     = None
+    expected_return: Optional[datetime] = None
 
 class PlayerGame(BaseModel):
     game_id: int
@@ -99,6 +117,18 @@ class PlayerGame(BaseModel):
     opponent_logo: Optional[str]
     minutes_played: int  # MIN from player_game table
     games_started: int   # GS from player_game table
+
+class PlayerCreate(BaseModel):
+    name: str
+    jersey_number: Optional[int] = None
+    position:       Optional[str] = None
+    year:           Optional[str] = None
+    age:            Optional[int] = None
+    height:         Optional[float] = None
+    weight:         Optional[float] = None
+    points:         Optional[int] = 0
+    bio:            Optional[str] = None
+    image_url:      Optional[str] = None
 
 def get_db_connection():
     try:
@@ -495,109 +525,169 @@ def get_player_games(player_id: int):
     finally:
         conn.close()
 
-@app.post("/add-game/")
-def add_game(game: Game, current_user: UserInDB = Depends(get_current_user)):
+@app.post("/add-game/", response_model=Game)
+def add_game(
+    game_in: GameCreate,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    if current_user.role != "coach":
+        raise HTTPException(403, "Only coaches can add games.")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
     try:
-        # Ensure the user is a coach before adding a game
-        if current_user.role != "coach":
-            raise HTTPException(status_code=403, detail="Only coaches can add games.")
-
-        # Connect to the database
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Insert the new game into the games table
-        cursor.execute(
-            "INSERT INTO games (game_date, opponent, location, team_score, opponent_score, attendance, opponent_logo) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (game.game_date, game.opponent, game.location, game.team_score, game.opponent_score, game.attendance, game.opponent_logo)
-        )
-        
-        # Commit changes and close connection
+        cur.execute("""
+            INSERT INTO games
+              (game_date, opponent, location,
+               team_score, opponent_score,
+               attendance, opponent_logo)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            game_in.game_date,
+            game_in.opponent,
+            game_in.location,
+            game_in.team_score,
+            game_in.opponent_score,
+            game_in.attendance,
+            game_in.opponent_logo,
+        ))
         conn.commit()
-        new_game_id = cursor.lastrowid
+        new_id = cur.lastrowid
+
+        # Now fetch the inserted row
+        cur.execute("SELECT * FROM games WHERE game_id = ?", (new_id,))
+        row = cur.fetchone()
         conn.close()
 
-        # Return the added game data (including the new game ID)
-        return {**game.dict(), "game_id": new_game_id}
+        if not row:
+            raise HTTPException(500, "Failed to fetch newly added game.")
+
+        # Return it as a dict matching the Game model
+        return dict(row)
 
     except sqlite3.Error as e:
-        raise HTTPException(status_code=500, detail=f"Error adding game: {e}")
+        conn.close()
+        raise HTTPException(500, f"Error adding game: {e}")
     
 @app.delete("/delete-game/{game_id}")
-def delete_game(game_id: int, current_user: UserInDB = Depends(get_current_user)):
+def delete_game(
+    game_id: int,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    if current_user.role != "coach":
+        raise HTTPException(403, "Only coaches can delete games.")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
     try:
-        # Ensure the user is a coach before deleting a game
-        if current_user.role != "coach":
-            raise HTTPException(status_code=403, detail="Only coaches can delete games.")
+        cur.execute("SELECT 1 FROM games WHERE game_id = ?", (game_id,))
+        if not cur.fetchone():
+            raise HTTPException(404, "Game not found.")
 
-        # Connect to the database
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Check if the game exists in the database
-        cursor.execute("SELECT * FROM games WHERE game_id = ?", (game_id,))
-        game = cursor.fetchone()
-        if not game:
-            conn.close()
-            raise HTTPException(status_code=404, detail="Game not found.")
-
-        # Delete the game from the database
-        cursor.execute("DELETE FROM games WHERE game_id = ?", (game_id,))
+        cur.execute("DELETE FROM games WHERE game_id = ?", (game_id,))
         conn.commit()
         conn.close()
-
         return {"message": f"Game {game_id} deleted successfully."}
 
     except sqlite3.Error as e:
-        raise HTTPException(status_code=500, detail=f"Error deleting game: {e}")
+        conn.close()
+        raise HTTPException(500, f"Error deleting game: {e}")
     
-@app.post("/add-player/")
-def add_player(player: PlayerExtended, current_user: UserInDB = Depends(get_current_user)):
+@app.post("/add-player/", response_model=PlayerExtended)
+def add_player(
+    player_in: PlayerCreate,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    # only coaches may add
+    if current_user.role != "coach":
+        raise HTTPException(403, "Only coaches can add players.")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # split name into first/last
+    parts = player_in.name.strip().split(" ", 1)
+    first_name = parts[0]
+    last_name  = parts[1] if len(parts) > 1 else ""
+
     try:
-        # Ensure the user is a coach before adding a player
-        if current_user.role != "coach":
-            raise HTTPException(status_code=403, detail="Only coaches can add players.")
-
-        # Connect to the database
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Insert the new player into the players table
-        cursor.execute(
-            "INSERT INTO players (name, jersey_number, position, year, age, height, weight, points, points_per_game, rebounds, rebounds_per_game, assists, fg_pct, games_played, created_at, image_url, bio) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                player.name,
-                player.jersey_number,
-                player.position,
-                player.year,
-                player.age,
-                player.height,
-                player.weight,
-                player.points,
-                player.points_per_game,
-                player.rebounds,
-                player.rebounds_per_game,
-                player.assists,
-                player.fg_pct,
-                player.games_played,
-                datetime.utcnow(),  # Set current timestamp
-                player.image_url,
-                player.bio,
-            )
-        )
-        
-        # Commit changes and close connection
+        cur.execute("""
+            INSERT INTO players
+              (first_name, last_name,
+               jersey_number, position, year,
+               age, height, weight,
+               points, bio, image_url)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
+        """, (
+            first_name, last_name,
+            player_in.jersey_number,
+            player_in.position,
+            player_in.year,
+            player_in.age,
+            player_in.height,
+            player_in.weight,
+            player_in.points,
+            player_in.bio,
+            player_in.image_url
+        ))
         conn.commit()
-        new_player_id = cursor.lastrowid
+        new_id = cur.lastrowid
+
+        # now fetch just the columns PlayerExtended needs
+        cur.execute("""
+            SELECT 
+              player_id,
+              first_name || ' ' || last_name AS name,
+              jersey_number,
+              position,
+              year,
+              age,
+              height,
+              weight,
+              points,
+              points_per_game,
+              total_rebounds    AS rebounds,
+              rebounds_per_game,
+              assists,
+              fg_pct,
+              games_played,
+              created_at,
+              image_url,
+              bio
+            FROM players
+            WHERE player_id = ?
+        """, (new_id,))
+        row = cur.fetchone()
         conn.close()
 
-        # Return the added player data (including the new player ID)
-        return {**player.dict(), "player_id": new_player_id}
+        if not row:
+            raise HTTPException(500, "Failed to fetch newly added player.")
+
+        # row is a sqlite3.Row, so this dict comprehension works nicely
+        return {
+            "player_id":       row["player_id"],
+            "name":            row["name"],
+            "jersey_number":   row["jersey_number"],
+            "position":        row["position"],
+            "year":            row["year"],
+            "age":             row["age"],
+            "height":          row["height"],
+            "weight":          row["weight"],
+            "points":          row["points"],
+            "points_per_game": row["points_per_game"],
+            "rebounds":        row["rebounds"],
+            "rebounds_per_game": row["rebounds_per_game"],
+            "assists":         row["assists"],
+            "fg_pct":          row["fg_pct"],
+            "games_played":    row["games_played"],
+            "created_at":      row["created_at"],
+            "image_url":       row["image_url"],
+            "bio":             row["bio"],
+        }
 
     except sqlite3.Error as e:
-        raise HTTPException(status_code=500, detail=f"Error adding player: {e}")
+        conn.close()
+        raise HTTPException(500, f"Error adding player: {e}")
 
 @app.delete("/delete-player/{player_id}")
 def delete_player(player_id: int, current_user: UserInDB = Depends(get_current_user)):
@@ -626,3 +716,88 @@ def delete_player(player_id: int, current_user: UserInDB = Depends(get_current_u
 
     except sqlite3.Error as e:
         raise HTTPException(status_code=500, detail=f"Error deleting player: {e}")
+
+@app.post("/add-injury/", response_model=Injury)
+def add_injury(
+    inj: InjuryCreate,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    if current_user.role != "coach":
+        raise HTTPException(403, "Only coaches can add injuries.")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Insert without touching created_at (it defaults)
+        cur.execute("""
+          INSERT INTO injuries (
+            player_id, injury_type, injury_date,
+            recovery_status, expected_return
+          ) VALUES (?,?,?,?,?)
+        """, (
+          inj.player_id,
+          inj.injury_type,
+          inj.injury_date,
+          inj.recovery_status,
+          inj.expected_return
+        ))
+        conn.commit()
+        new_id = cur.lastrowid
+
+        # Fetch back the full row, including created_at and player's name
+        cur.execute("""
+          SELECT
+            i.injury_id,
+            i.player_id,
+            p.first_name || ' ' || p.last_name AS name,
+            i.injury_type,
+            i.injury_date,
+            i.recovery_status,
+            i.expected_return,
+            i.created_at
+          FROM injuries i
+          JOIN players p ON i.player_id = p.player_id
+          WHERE i.injury_id = ?
+        """, (new_id,))
+        row = cur.fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        raise HTTPException(500, "Failed to fetch newly added injury.")
+
+    # Return exactly the fields your Injury model needs
+    return {
+        "injury_id":       row["injury_id"],
+        "player_id":       row["player_id"],
+        "name":            row["name"],
+        "injury_type":     row["injury_type"],
+        "injury_date":     row["injury_date"],
+        "recovery_status": row["recovery_status"],
+        "expected_return": row["expected_return"],
+        "created_at":      row["created_at"],
+    }
+
+@app.delete("/delete-injury/{injury_id}")
+def delete_injury(
+    injury_id: int,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    if current_user.role != "coach":
+        raise HTTPException(403, "Only coaches can delete injuries.")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Verify it exists
+        cur.execute("SELECT 1 FROM injuries WHERE injury_id = ?", (injury_id,))
+        if not cur.fetchone():
+            raise HTTPException(404, "Injury not found.")
+
+        # Perform delete
+        cur.execute("DELETE FROM injuries WHERE injury_id = ?", (injury_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+    return {"message": f"Injury {injury_id} deleted successfully."}

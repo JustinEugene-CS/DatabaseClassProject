@@ -1,134 +1,143 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [email, setEmail] = useState(''); // For signup
-  const [role, setRole] = useState('viewer'); // For selecting role in signup
-  const [isSignUp, setIsSignUp] = useState(false); // Toggle between login and signup
-  const [error, setError] = useState(''); // To capture error messages
+  const [email, setEmail] = useState('');               // For signup
+  const [signUpRole, setSignUpRole] = useState('viewer'); // Avoid name clash
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [error, setError] = useState('');
 
   const navigate = useNavigate();
 
-  // Handle Login
+  // ─── Login ────────────────────────────────────────────────────────────────
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError(''); // Reset error message before starting the login request
+    setError('');
 
     try {
-        const response = await fetch('http://127.0.0.1:8000/login/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ username, password }),
-        });
+      const response = await fetch('http://127.0.0.1:8000/login/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        console.error('Login error:', data);
+        throw new Error(data.detail || 'Login failed');
+      }
 
-        const data = await response.json();
-        
-        if (!response.ok) {
-            // Log out the full error to help debugging
-            console.error('Error response:', data);
-            throw new Error(data.detail || 'Login failed');
-        }
+      // Decode the token to get the role claim
+      const { role: decodedRole } = jwtDecode(data.access_token);
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('role', decodedRole);
 
-        // If login is successful, store the JWT token
-        localStorage.setItem('token', data.access_token);
-        localStorage.setItem('role', data.role);
-
-        // Redirect to a protected page (e.g., dashboard or home page)
-        navigate('/'); // Adjust this based on your routing
-    } catch (error) {
-        setError(error.message);  // Display error message to the user
+      navigate('/');
+    } catch (err) {
+      setError(err.message);
     }
-};
+  };
 
-  // Handle Sign Up
+  // ─── Sign Up ─────────────────────────────────────────────────────────────
   const handleSignUp = async (e) => {
     e.preventDefault();
-    setError(''); // Reset error message before starting the signup request
+    setError('');
 
     try {
       const response = await fetch('http://127.0.0.1:8000/register/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password, email, role }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          password,
+          email,
+          role: signUpRole,
+        }),
       });
-
       const data = await response.json();
-
       if (!response.ok) {
+        console.error('Signup error:', data);
         throw new Error(data.detail || 'Sign Up failed');
       }
 
-      // If sign up is successful, store the JWT token
+      const { role: decodedRole } = jwtDecode(data.access_token);
       localStorage.setItem('token', data.access_token);
-      localStorage.setItem('role', data.role);
+      localStorage.setItem('role', decodedRole);
 
-      // Redirect to a login page or dashboard
-      navigate('/'); // Adjust this based on your routing
-    } catch (error) {
-      setError(error.message);
+      navigate('/');
+    } catch (err) {
+      setError(err.message);
     }
   };
 
-  // Toggle between login and signup
-  const toggleSignUp = () => {
-    setIsSignUp(!isSignUp); // Toggle between login and signup
-  };
+  const toggleSignUp = () => setIsSignUp(prev => !prev);
 
   return (
     <div className="container">
       <h2>{isSignUp ? 'Sign Up' : 'Login'}</h2>
-      <form onSubmit={isSignUp ? handleSignUp : handleLogin} style={{ maxWidth: 300 }}>
+      <form
+        onSubmit={isSignUp ? handleSignUp : handleLogin}
+        style={{ maxWidth: 300 }}
+      >
+        {/* Username */}
         <div style={{ marginBottom: 15 }}>
-          <label htmlFor="username" style={{ display: 'block', marginBottom: 5 }}>Username:</label>
-          <input 
+          <label htmlFor="username" style={{ display: 'block', marginBottom: 5 }}>
+            Username:
+          </label>
+          <input
             id="username"
             type="text"
             value={username}
             onChange={e => setUsername(e.target.value)}
             style={{ padding: 8, width: '100%' }}
-            required 
+            required
           />
         </div>
-        
+
+        {/* Email (signup only) */}
         {isSignUp && (
           <div style={{ marginBottom: 15 }}>
-            <label htmlFor="email" style={{ display: 'block', marginBottom: 5 }}>Email:</label>
-            <input 
+            <label htmlFor="email" style={{ display: 'block', marginBottom: 5 }}>
+              Email:
+            </label>
+            <input
               id="email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               style={{ padding: 8, width: '100%' }}
-              required 
+              required
             />
           </div>
         )}
 
+        {/* Password */}
         <div style={{ marginBottom: 15 }}>
-          <label htmlFor="password" style={{ display: 'block', marginBottom: 5 }}>Password:</label>
-          <input 
+          <label htmlFor="password" style={{ display: 'block', marginBottom: 5 }}>
+            Password:
+          </label>
+          <input
             id="password"
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             style={{ padding: 8, width: '100%' }}
-            required 
+            required
           />
         </div>
 
+        {/* Role selector (signup only) */}
         {isSignUp && (
           <div style={{ marginBottom: 15 }}>
-            <label htmlFor="role" style={{ display: 'block', marginBottom: 5 }}>Role:</label>
+            <label htmlFor="role" style={{ display: 'block', marginBottom: 5 }}>
+              Role:
+            </label>
             <select
               id="role"
-              value={role}
-              onChange={e => setRole(e.target.value)}
+              value={signUpRole}
+              onChange={e => setSignUpRole(e.target.value)}
               style={{ padding: 8, width: '100%' }}
               required
             >
@@ -138,20 +147,26 @@ const Login = () => {
           </div>
         )}
 
-        <button type="submit" style={{
-          padding: '10px 20px',
-          backgroundColor: '#002855',
-          color: '#FFB612',
-          border: 'none',
-          fontWeight: 'bold',
-          cursor: 'pointer'
-        }}>
+        {/* Submit */}
+        <button
+          type="submit"
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#002855',
+            color: '#FFB612',
+            border: 'none',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+          }}
+        >
           {isSignUp ? 'Sign Up' : 'Login'}
         </button>
       </form>
 
+      {/* Error message */}
       {error && <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>}
 
+      {/* Toggle link */}
       <p style={{ marginTop: 15, textAlign: 'center' }}>
         {isSignUp ? 'Already have an account? ' : 'Need to sign up? '}
         <span
