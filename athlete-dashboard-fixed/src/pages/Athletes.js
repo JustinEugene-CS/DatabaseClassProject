@@ -212,7 +212,6 @@ const Athletes = () => {
       {currentPlayers.length ? (
         currentPlayers.map(player => (
           <div key={player.player_id} style={{ marginBottom: 20 }}>
-            <h3>{player.name}</h3>
             <AthleteCard player={player} />
             {/* Coach-only: Delete Player */}
             {isCoach && (

@@ -1,53 +1,51 @@
 import React, { useState, useEffect } from 'react';
 
 const AthleteCard = ({ player }) => {
-  const [favorited, setFavorited] = useState(false);  // Track if the player is favorited
-  const [showFullBio, setShowFullBio] = useState(false);  // State to manage the bio visibility
+  const [favorited, setFavorited] = useState(false);
+  const [showFullBio, setShowFullBio] = useState(false);
+  const token = localStorage.getItem('token');
 
-  // Check if the player is already in the favorites
+  // Check if the player is already in the user's favorites
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/favorites')
-      .then(res => res.json())
-      .then(favs => {
-        const isFav = favs.some(fav => fav.player_id === player.player_id);  // Check if this player is in favorites
-        setFavorited(isFav);  // Update the favorited state
-      })
-      .catch(err => console.error('Error fetching favorites:', err));
-  }, [player.player_id]);  // Re-run the effect when the player changes
+    const checkFavorite = async () => {
+      try {
+        const res = await fetch('http://127.0.0.1:8000/favorites', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (!res.ok) throw new Error(`Failed to fetch favorites: ${res.status}`);
+        const favs = await res.json();
+        setFavorited(Array.isArray(favs) && favs.some(fav => fav.player_id === player.player_id));
+      } catch (err) {
+        console.error('Error fetching favorites:', err);
+      }
+    };
+    if (token) checkFavorite();
+  }, [player.player_id, token]);
 
-  // Handle toggling the favorite state
-  const toggleFavorite = () => {
-    if (!favorited) {
-      // Add the player to favorites
-      fetch('http://127.0.0.1:8000/favorites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ player_id: player.player_id, user_id: 1 })  // Simulate user_id as 1 for now
-      })
-        .then(() => {
-          setFavorited(true);  // Set as favorited
-          console.log('Player added to favorites');
-        })
-        .catch(err => console.error('Error adding favorite:', err));
-    } else {
-      // Remove the player from favorites
-      fetch('http://127.0.0.1:8000/favorites', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ player_id: player.player_id, user_id: 1 })  // Simulate user_id as 1 for now
-      })
-        .then(() => {
-          setFavorited(false);  // Set as unfavorited
-          console.log('Player removed from favorites');
-        })
-        .catch(err => console.error('Error removing favorite:', err));
+  // Toggle favorite state for this player
+  const toggleFavorite = async () => {
+    try {
+      const url = 'http://127.0.0.1:8000/favorites';
+      const method = favorited ? 'DELETE' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ player_id: player.player_id })
+      });
+      if (!res.ok) throw new Error(`Failed to ${favorited ? 'remove' : 'add'} favorite: ${res.status}`);
+      setFavorited(!favorited);
+    } catch (err) {
+      console.error('Error toggling favorite:', err);
     }
   };
 
-  // Handle toggling bio visibility
-  const toggleBio = () => {
-    setShowFullBio(!showFullBio);  // Toggle the bio visibility
-  };
+  // Toggle bio visibility
+  const toggleBio = () => setShowFullBio(prev => !prev);
 
   return (
     <div
@@ -63,7 +61,7 @@ const AthleteCard = ({ player }) => {
     >
       <img
         src={player.image_url || 'https://via.placeholder.com/150'}
-        alt={`${player.first_name} ${player.last_name}`}
+        alt={player.name}
         style={{
           width: '150px',
           height: '150px',
@@ -73,9 +71,9 @@ const AthleteCard = ({ player }) => {
         }}
       />
       <div>
-        <h3>{player.first_name} {player.last_name}</h3>
+        <h3>{player.name}</h3>
 
-        {/* Toggle Favorite Button */}
+        {/* Favorite Toggle */}
         <button
           onClick={toggleFavorite}
           style={{
@@ -102,14 +100,12 @@ const AthleteCard = ({ player }) => {
         <p><strong>Points/Game:</strong> {player.points_per_game ?? 'N/A'}</p>
         <p><strong>Rebounds/Game:</strong> {player.rebounds_per_game ?? 'N/A'}</p>
         <p><strong>Assists:</strong> {player.assists ?? 'N/A'}</p>
-        <p><strong>FG%:</strong> {isNaN(player.fg_pct) || player.fg_pct === null ? 'N/A' : `${(player.fg_pct * 100).toFixed(1)}%`}</p>
+        <p><strong>FG%:</strong> {isNaN(player.fg_pct) || player.fg_pct == null ? 'N/A' : `${(player.fg_pct * 100).toFixed(1)}%`}</p>
 
         {/* Bio Section */}
-        <p><strong>Bio:</strong> 
+        <p><strong>Bio:</strong> {' '}
           {showFullBio ? player.bio : `${player.bio?.slice(0, 100)}${player.bio?.length > 100 ? '...' : ''}`}
         </p>
-
-        {/* Toggle button for bio */}
         {player.bio && player.bio.length > 100 && (
           <button
             onClick={toggleBio}

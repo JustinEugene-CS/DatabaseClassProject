@@ -42,13 +42,13 @@ class UserLogin(BaseModel):
     password: str
 
 class UserInDB(BaseModel):
-    username:        str
-    role:            str
+    id:       int
+    username: str
+    role:     str
     hashed_password: str = ""
 
 class FavoriteIn(BaseModel):
-    player_id: int  # Player ID for the favorite
-    user_id: int    # User ID who favorited the player
+    player_id: int
 
 class PlayerExtended(BaseModel):
     player_id: int
@@ -115,8 +115,8 @@ class PlayerGame(BaseModel):
     opponent_score: int
     attendance: Optional[int]
     opponent_logo: Optional[str]
-    minutes_played: int  # MIN from player_game table
-    games_started: int   # GS from player_game table
+    minutes_played: int 
+    games_started: int 
 
 class PlayerCreate(BaseModel):
     name: str
@@ -145,26 +145,32 @@ def read_root():
     return {"message": "Welcome to the Basketball API"}
 
 # Function to get the current user from the JWT token
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInDB:
     credentials_exception = HTTPException(
         status_code=401,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        # Decode the JWT token
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        role: str = payload.get("role")
-        
-        # If username or role is not found, raise credentials exception
-        if username is None:
+        payload  = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        role     = payload.get("role")
+        if not username or not role:
             raise credentials_exception
-        
-        return UserInDB(username=username, hashed_password="", role=role)
-    
     except jwt.PyJWTError:
         raise credentials_exception
+
+    conn = get_db_connection()
+    row  = conn.execute(
+        "SELECT id, username, role FROM users WHERE username = ?",
+        (username,)
+    ).fetchone()
+    conn.close()
+
+    if not row:
+        raise credentials_exception
+
+    return UserInDB(id=row["id"], username=row["username"], role=row["role"])
 
 # JWT creation
 def create_access_token(data: dict, expires_delta: timedelta = timedelta(hours=1)):
@@ -287,10 +293,10 @@ def get_random_player():
                 "assists": row["assists"] if row["assists"] is not None else 0,
                 "fg_pct": row["fg_pct"] if row["fg_pct"] is not None else 0.0,
                 "games_played": row["games_played"] if row["games_played"] is not None else 0,
-                "games_started": row["games_started"] if row["games_started"] is not None else 0,  # Ensure this field is included
-                "minutes": row["minutes"] if row["minutes"] is not None else 0,  # Ensure this field is included
-                "minutes_per_game": row["minutes_per_game"] if row["minutes_per_game"] is not None else 0.0,  # Ensure this field is included
-                "fg_made": row["fg_made"] if row["fg_made"] is not None else 0,  # Ensure this field is included
+                "games_started": row["games_started"] if row["games_started"] is not None else 0,  
+                "minutes": row["minutes"] if row["minutes"] is not None else 0,  
+                "minutes_per_game": row["minutes_per_game"] if row["minutes_per_game"] is not None else 0.0,  
+                "fg_made": row["fg_made"] if row["fg_made"] is not None else 0,  
                 "three_made": row["three_made"] if row["three_made"] is not None else 0,
                 "ft_made": row["ft_made"] if row["ft_made"] is not None else 0,
                 "off_rebounds": row["off_rebounds"] if row["off_rebounds"] is not None else 0,
@@ -339,10 +345,10 @@ def get_all_players():
                 "assists": row["assists"] if row["assists"] is not None else 0,
                 "fg_pct": row["fg_pct"] if row["fg_pct"] is not None else 0.0,
                 "games_played": row["games_played"] if row["games_played"] is not None else 0,
-                "games_started": row["games_started"] if row["games_started"] is not None else 0,  # Ensure this field is included
-                "minutes": row["minutes"] if row["minutes"] is not None else 0,  # Ensure this field is included
-                "minutes_per_game": row["minutes_per_game"] if row["minutes_per_game"] is not None else 0.0,  # Ensure this field is included
-                "fg_made": row["fg_made"] if row["fg_made"] is not None else 0,  # Ensure this field is included
+                "games_started": row["games_started"] if row["games_started"] is not None else 0,  
+                "minutes": row["minutes"] if row["minutes"] is not None else 0,  
+                "minutes_per_game": row["minutes_per_game"] if row["minutes_per_game"] is not None else 0.0,  
+                "fg_made": row["fg_made"] if row["fg_made"] is not None else 0,  
                 "three_made": row["three_made"] if row["three_made"] is not None else 0,
                 "ft_made": row["ft_made"] if row["ft_made"] is not None else 0,
                 "off_rebounds": row["off_rebounds"] if row["off_rebounds"] is not None else 0,
@@ -390,7 +396,7 @@ def get_all_games():
             "team_score": row["team_score"],
             "opponent_score": row["opponent_score"],
             "attendance": row["attendance"],
-            "opponent_logo": row["opponent_logo"],  # Send opponent_logo for each game
+            "opponent_logo": row["opponent_logo"],  
             "created_at": row["created_at"]
         }
         for row in rows
@@ -412,118 +418,56 @@ def get_all_injuries():
     conn.close()
     return [dict(row) for row in rows]
 
-@app.post("/favorites")
-def add_favorite(fav: FavoriteIn):
+@app.get("/favorites", response_model=List[FavoriteIn])
+def list_favorites(current_user: UserInDB = Depends(get_current_user)):
     conn = get_db_connection()
-    cur = conn.cursor()
+    rows = conn.execute(
+        "SELECT player_id FROM favorites WHERE user_id = ? ORDER BY created_at DESC",
+        (current_user.id,)
+    ).fetchall()
+    conn.close()
+    return [FavoriteIn(player_id=row["player_id"]) for row in rows]
 
-    try:
-        # Insert the favorite into the favorites table
-        cur.execute(
-            "INSERT INTO favorites (user_id, player_id) VALUES (?, ?)",
-            (fav.user_id, fav.player_id)
-        )
-        conn.commit()  # Commit the transaction
-
-        # Get the last inserted favorite_id (useful if you need to return it or use it)
-        favorite_id = cur.lastrowid
-        return {"favorite_id": favorite_id}  # Return the inserted favorite_id
-    except Exception as e:
-        print(f"❌ Error adding favorite: {e}")
-        raise HTTPException(500, "Error adding favorite")
-    finally:
-        conn.close()
+@app.post("/favorites")
+def add_favorite(
+    fav: FavoriteIn,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    conn = get_db_connection()
+    cur  = conn.cursor()
+    cur.execute(
+        "INSERT INTO favorites (user_id, player_id) VALUES (?, ?)",
+        (current_user.id, fav.player_id)
+    )
+    conn.commit()
+    favorite_id = cur.lastrowid
+    conn.close()
+    return {"favorite_id": favorite_id}
 
 @app.delete("/favorites")
-def remove_favorite(fav: FavoriteIn):
-    user_id = fav.user_id  # Assuming the user_id is passed as part of the request
-    player_id = fav.player_id
-
+def remove_favorite(
+    fav: FavoriteIn,
+    current_user: UserInDB = Depends(get_current_user)
+):
     conn = get_db_connection()
-    cur = conn.cursor()
+    cur  = conn.cursor()
+    cur.execute(
+        "DELETE FROM favorites WHERE user_id = ? AND player_id = ?",
+        (current_user.id, fav.player_id)
+    )
+    conn.commit()
+    deleted = cur.rowcount > 0
+    conn.close()
 
-    try:
-        # Delete the favorite entry where the player matches and the user_id is correct
-        cur.execute(
-            "DELETE FROM favorites WHERE player_id = ? AND user_id = ?",
-            (player_id, user_id)
-        )
-        conn.commit()
-        
-        if cur.rowcount == 0:
-            raise HTTPException(404, "Favorite not found")
-        
-        return {"deleted": True}
-    
-    except Exception as e:
-        print(f"Error removing favorite: {e}")
-        raise HTTPException(500, "Error removing favorite")
-    
-    finally:
-        cur.close()
-        conn.close()
-
-@app.get("/favorites", response_model=List[Dict])
-def list_favorites():
-    user_id = 1  # Simulated user_id for now
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    try:
-        # Fetch favorites for this user
-        cur.execute(
-            "SELECT * FROM favorites WHERE user_id = ? ORDER BY created_at DESC",
-            (user_id,)
-        )
-        rows = cur.fetchall()
-        conn.close()
-
-        return [dict(row) for row in rows]
-
-    except Exception as e:
-        conn.close()
-        raise HTTPException(status_code=500, detail=f"Error fetching favorites: {e}")
+    if not deleted:
+        raise HTTPException(404, "Favorite not found")
+    return {"deleted": True}
 
 # Function to get a DB connection (not provided in the code snippet)
 def get_db_connection():
     conn = sqlite3.connect(SQLITE_DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
-
-@app.get("/player-games/{player_id}")
-def get_player_games(player_id: int):
-    conn = get_db_connection()
-    if not conn:
-        raise HTTPException(500, "DB connection failed")
-
-    try:
-        # Query player_game table for games played by the player
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT pg.game_id, g.opponent_logo, pg.MIN as minutes_played, g.team_score, g.opponent_score
-            FROM player_game pg
-            JOIN games g ON pg.game_id = g.game_id
-            WHERE pg.player_id = ?
-        """, (player_id,))
-        
-        rows = cur.fetchall()
-        games = [
-            {
-                "game_id": row["game_id"],
-                "opponent_logo": row["opponent_logo"],
-                "minutes_played": row["minutes_played"],
-                "team_score": row["team_score"],
-                "opponent_score": row["opponent_score"]
-            }
-            for row in rows
-        ]
-        
-        return games
-    except Exception as e:
-        print(f"❌ Error fetching player games: {e}")
-        raise HTTPException(500, "Error fetching player games")
-    finally:
-        conn.close()
 
 @app.post("/add-game/", response_model=Game)
 def add_game(
@@ -801,3 +745,71 @@ def delete_injury(
         conn.close()
 
     return {"message": f"Injury {injury_id} deleted successfully."}
+
+@app.get("/players/{player_id}", response_model=PlayerExtended)
+def get_player(player_id: int):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT *, first_name || ' ' || last_name AS name "
+        "FROM players WHERE player_id = ?", (player_id,)
+    )
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(404, "Player not found")
+    return {
+        "player_id":        row["player_id"],
+        "name":             row["name"],
+        "jersey_number":    row["jersey_number"],
+        "position":         row["position"],
+        "year":             row["year"],
+        "age":              row["age"],
+        "height":           row["height"],
+        "weight":           row["weight"],
+        "points":           row["points"],
+        "points_per_game":  row["points_per_game"],
+        "rebounds":         row["total_rebounds"],
+        "rebounds_per_game":row["rebounds_per_game"],
+        "assists":          row["assists"],
+        "fg_pct":           row["fg_pct"],
+        "games_played":     row["games_played"],
+        "created_at":       row["created_at"],
+        "image_url":        row["image_url"],
+        "bio":              row["bio"],
+    }
+
+@app.get("/player-games/{player_id}")
+def get_player_games(player_id: int):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT
+          pg.game_id,
+          g.opponent,
+          g.game_date,               -- ← this line is crucial
+          g.team_score,
+          g.opponent_score,
+          pg.MIN    AS minutes_played,
+          pg.GS     AS games_started
+        FROM player_game pg
+        JOIN games g ON pg.game_id = g.game_id
+        WHERE pg.player_id = ?
+        ORDER BY g.game_date DESC
+    """, (player_id,))
+    rows = cur.fetchall()
+    conn.close()
+
+    # return a list of dicts that include game_date
+    return [
+        {
+            "game_id":        row["game_id"],
+            "game_date":      row["game_date"],
+            "opponent":       row["opponent"],
+            "team_score":     row["team_score"],
+            "opponent_score": row["opponent_score"],
+            "minutes_played": row["minutes_played"],
+            "games_started":  row["games_started"],
+        }
+        for row in rows
+    ]
